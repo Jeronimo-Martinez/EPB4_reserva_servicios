@@ -1,0 +1,15 @@
+$kind: http-request
+name: Verificar Registro
+order: 2000
+method: POST
+url: '{{baseUrl}}/api/v1/registrations/verify'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "ana.gomez@example.com",
+      "code": "123456"
+    }

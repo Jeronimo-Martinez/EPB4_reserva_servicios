@@ -1,0 +1,18 @@
+$kind: collection
+name: Reserva Servicios API
+description: |-
+  Colección de endpoints para el backend de Reserva Servicios (EPB4).
+
+  ## Flujo general
+  1. Registrar cliente → POST /api/v1/registrations
+  2. Verificar código de activación → POST /api/v1/registrations/verify
+  3. Iniciar sesión → POST /api/v1/auth/login
+
+  ## Formato de error
+  { "status": 400, "message": "descripción del error" }
+
+  Códigos: 400 datos inválidos · 401 credenciales incorrectas · 409 correo ya registrado · 200/201 éxito.
+variables:
+  - key: baseUrl
+    value: 'http://localhost:8080'
+    description: URL base del servidor local
