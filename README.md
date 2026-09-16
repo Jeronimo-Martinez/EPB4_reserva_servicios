@@ -4,7 +4,7 @@
 
 ```text
 backend/       API Spring Boot, persistencia, seguridad, pruebas y documentación
-frontend/      Espacio reservado para la futura aplicación cliente
+frontend/      Aplicación web cliente y proveedor
 backend/postman/ Colecciones y recursos para probar la API
 ```
 
@@ -30,3 +30,19 @@ cd backend
 .\mvnw.cmd test
 ```
 
+## Ejecutar el frontend
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+La aplicación queda disponible en `http://localhost:5173`. La documentación de la aplicación cliente está en [frontend/docs/serviciosFrontend.md](frontend/docs/serviciosFrontend.md).
+
+## Validar el frontend
+
+```powershell
+cd frontend
+npm run build
+```
