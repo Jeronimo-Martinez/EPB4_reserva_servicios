@@ -1,0 +1,3 @@
+$kind: collection
+name: Registro
+description: Endpoints para el registro de nuevos clientes y verificación del código de activación.
