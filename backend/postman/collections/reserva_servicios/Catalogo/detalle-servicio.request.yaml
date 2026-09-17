@@ -1,0 +1,5 @@
+$kind: http-request
+name: Detalle Servicio
+order: 5000
+method: GET
+url: '{{baseUrl}}/api/v1/catalog/{{serviceId}}'

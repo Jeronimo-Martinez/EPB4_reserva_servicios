@@ -1,0 +1,5 @@
+$kind: http-request
+name: Listar Servicios
+order: 2000
+method: GET
+url: '{{baseUrl}}/api/v1/services?providerEmail=centro.vital@example.com'

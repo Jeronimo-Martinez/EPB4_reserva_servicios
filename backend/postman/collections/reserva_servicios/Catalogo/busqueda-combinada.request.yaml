@@ -1,0 +1,5 @@
+$kind: http-request
+name: Busqueda Combinada
+order: 4000
+method: GET
+url: '{{baseUrl}}/api/v1/catalog?search=masaje&category=Salud y Bienestar'

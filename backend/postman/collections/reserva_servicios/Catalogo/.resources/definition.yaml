@@ -1,0 +1,3 @@
+$kind: collection
+name: Catalogo
+description: Endpoints publicos para el catalogo de servicios (pagina de inicio, busqueda, filtrado y detalle).

@@ -1,7 +1,10 @@
 package com.EBP4_back.reserva_servicios.controller;
 
+import com.EBP4_back.reserva_servicios.dto.ProviderRegistrationRequest;
 import com.EBP4_back.reserva_servicios.dto.RegistrationRequest;
 import com.EBP4_back.reserva_servicios.dto.RegistrationResponse;
+import com.EBP4_back.reserva_servicios.dto.ResendCodeRequest;
+import com.EBP4_back.reserva_servicios.dto.ResendCodeResponse;
 import com.EBP4_back.reserva_servicios.dto.VerificationRequest;
 import com.EBP4_back.reserva_servicios.dto.VerificationResponse;
 import com.EBP4_back.reserva_servicios.service.RegistrationService;
@@ -17,16 +20,30 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/registrations")
 public class RegistrationController {
     private final RegistrationService registrationService;
+
     public RegistrationController(RegistrationService registrationService) {
         this.registrationService = registrationService;
     }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public RegistrationResponse register(@Valid @RequestBody RegistrationRequest request) {
         return registrationService.register(request);
     }
+
+    @PostMapping("/provider")
+    @ResponseStatus(HttpStatus.CREATED)
+    public RegistrationResponse registerProvider(@Valid @RequestBody ProviderRegistrationRequest request) {
+        return registrationService.registerProvider(request);
+    }
+
     @PostMapping("/verify")
     public VerificationResponse verify(@Valid @RequestBody VerificationRequest request) {
         return registrationService.verify(request);
+    }
+
+    @PostMapping("/resend-code")
+    public ResendCodeResponse resendCode(@Valid @RequestBody ResendCodeRequest request) {
+        return registrationService.resendCode(request);
     }
 }
