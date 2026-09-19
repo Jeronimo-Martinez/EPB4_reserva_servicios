@@ -6,7 +6,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Component;
 
 @Component
-@ConditionalOnProperty(prefix = "spring.mail", name = "host")
+@ConditionalOnProperty(prefix = "app.mail", name = "enabled", havingValue = "true")
 public class MailVerificationCodeSender implements VerificationCodeSender {
     private final JavaMailSender mailSender;
 
