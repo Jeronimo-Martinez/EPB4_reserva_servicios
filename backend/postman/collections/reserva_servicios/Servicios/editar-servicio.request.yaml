@@ -1,0 +1,20 @@
+$kind: http-request
+name: Editar Servicio
+order: 3000
+method: PUT
+url: '{{baseUrl}}/api/v1/services/{{serviceId}}'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "providerEmail": "centro.vital@example.com",
+      "name": "Manicure Spa Premium",
+      "category": "Belleza",
+      "description": "Manicure premium con hidratacion, exfoliacion y esmaltado semipermanente.",
+      "durationMinutes": 75,
+      "price": 65000.00,
+      "available": true
+    }

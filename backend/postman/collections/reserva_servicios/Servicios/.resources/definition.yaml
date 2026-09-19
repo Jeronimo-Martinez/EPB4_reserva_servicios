@@ -1,0 +1,3 @@
+$kind: collection
+name: Servicios
+description: Endpoints para la gestion del catalogo de servicios ofrecidos por los proveedores.

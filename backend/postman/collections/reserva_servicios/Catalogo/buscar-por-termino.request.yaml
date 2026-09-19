@@ -1,0 +1,5 @@
+$kind: http-request
+name: Buscar Por Termino
+order: 2000
+method: GET
+url: '{{baseUrl}}/api/v1/catalog?search=masaje'
