@@ -1,0 +1,21 @@
+$kind: http-request
+name: Reenviar Código Proveedor
+order: 7000
+method: POST
+url: '{{baseUrl}}/api/v1/registrations/resend-code'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "{{testProviderEmail}}"
+    }
+events:
+  - listen: test
+    script:
+      exec:
+        - pm.test("Status code is 200", () => pm.response.to.have.status(200));
+        - "const res = pm.response.json();"
+        - pm.test("Response has message", () => pm.expect(res).to.have.property("message"));

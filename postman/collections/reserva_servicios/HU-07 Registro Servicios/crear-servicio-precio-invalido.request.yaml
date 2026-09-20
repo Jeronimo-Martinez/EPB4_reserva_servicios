@@ -1,0 +1,27 @@
+$kind: http-request
+name: Crear Servicio - Precio Inválido
+order: 4000
+method: POST
+url: '{{baseUrl}}/api/v1/services'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "providerEmail": "centro.vital@example.com",
+      "name": "Servicio Precio Cero",
+      "category": "EDUCACION",
+      "description": "Precio inválido",
+      "durationMinutes": 45,
+      "price": 0,
+      "available": true
+    }
+events:
+  - listen: test
+    script:
+      exec:
+        - pm.test("Status code is 400", () => pm.response.to.have.status(400));
+        - "const res = pm.response.json();"
+        - pm.test("Error message about price", () => pm.expect(res.message).to.exist);

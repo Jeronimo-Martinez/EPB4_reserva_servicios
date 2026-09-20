@@ -1,0 +1,15 @@
+$kind: http-request
+name: Listar Servicios Vacío
+order: 6000
+method: GET
+url: '{{baseUrl}}/api/v1/services?providerEmail=nuevoproveedor@test.com'
+headers:
+  - key: Content-Type
+    value: application/json
+events:
+  - listen: test
+    script:
+      exec:
+        - pm.test("Status code is 200", () => pm.response.to.have.status(200));
+        - "const res = pm.response.json();"
+        - pm.test("Response is an empty array", () => pm.expect(res).to.be.an("array").that.is.empty);

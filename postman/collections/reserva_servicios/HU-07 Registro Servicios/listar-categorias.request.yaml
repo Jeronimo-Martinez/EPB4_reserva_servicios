@@ -1,0 +1,22 @@
+$kind: http-request
+name: Listar Categorías
+order: 9000
+method: GET
+url: '{{baseUrl}}/api/v1/services/categories'
+headers:
+  - key: Content-Type
+    value: application/json
+events:
+  - listen: test
+    script:
+      exec:
+        - pm.test("Status code is 200", () => pm.response.to.have.status(200));
+        - "const res = pm.response.json();"
+        - pm.test("Response is an array", () => pm.expect(res).to.be.an("array"));
+        - pm.test("Has 7 categories", () => pm.expect(res.length).to.equal(7));
+        - pm.test("Each category has code and label", () => {
+            res.forEach(c => {
+              pm.expect(c).to.have.property("code");
+              pm.expect(c).to.have.property("label");
+            });
+          });

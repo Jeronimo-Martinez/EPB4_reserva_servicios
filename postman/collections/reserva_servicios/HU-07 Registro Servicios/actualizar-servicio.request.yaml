@@ -1,0 +1,28 @@
+$kind: http-request
+name: Actualizar Servicio
+order: 7000
+method: PUT
+url: '{{baseUrl}}/api/v1/services/{{createdServiceId}}'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "providerEmail": "centro.vital@example.com",
+      "name": "Servicio Test Postman - Actualizado",
+      "category": "TECNOLOGIA",
+      "description": "Servicio actualizado desde Postman",
+      "durationMinutes": 90,
+      "price": 75000,
+      "available": true
+    }
+events:
+  - listen: test
+    script:
+      exec:
+        - pm.test("Status code is 200", () => pm.response.to.have.status(200));
+        - "const res = pm.response.json();"
+        - pm.test("Name updated", () => pm.expect(res.name).to.equal("Servicio Test Postman - Actualizado"));
+        - pm.test("Price updated", () => pm.expect(res.price).to.equal(75000));

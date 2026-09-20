@@ -1,16 +1,17 @@
 export interface Service {
   id: string;
-  businessId?: string;
-  businessName?: string;
   name: string;
-  category: string;
   description: string;
+  category: string;
   durationMinutes: number;
   price: number;
-  isAvailable: boolean;
-  rating?: number;
-  reviewsCount?: number;
-  imageUrl?: string;
+  currency: string;
+  businessId?: string;
+  businessName?: string;
+  businessCategory?: string;
+  available: boolean;
+  averageRating?: number;
+  reviewCount?: number;
 }
 
 export interface ServiceBookingRequest {
@@ -25,12 +26,10 @@ export interface ServiceBookingRequest {
 
 export type ServiceCategory =
   | 'Todas'
-  | 'Belleza y Estética'
   | 'Salud y Bienestar'
-  | 'Entrenamiento Físico'
-  | 'Reparaciones del Hogar'
-  | 'Educación y Tutorías'
-  | 'Fotografía y Video'
-  | 'Limpieza y Mantenimiento'
-  | 'Tecnología y TI'
-  | 'Consultoría Profesional';
+  | 'Belleza'
+  | 'Hogar'
+  | 'Educacion'
+  | 'Tecnologia'
+  | 'Gastronomia'
+  | 'Otros';

@@ -9,7 +9,7 @@ import {
   StepIndicator,
 } from '@/components/ui';
 import { useAuth } from '@/context/AuthContext';
-import { RegisterProviderDTO } from '@/types/auth';
+import { ApiError } from '@/api/client';
 
 type Screen = 'paso1' | 'paso2' | 'verificacion' | 'confirmacion';
 
@@ -17,6 +17,7 @@ interface FormPaso1 {
   nombreNegocio: string;
   categoria: string;
   descripcion: string;
+  direccion: string;
 }
 
 interface FormPaso2 {
@@ -33,22 +34,29 @@ interface Errors {
 }
 
 const CATEGORIAS = [
-  'Belleza y Estética',
-  'Salud y Bienestar',
-  'Entrenamiento Físico',
-  'Reparaciones del Hogar',
-  'Educación y Tutorías',
-  'Fotografía y Video',
-  'Limpieza y Mantenimiento',
-  'Tecnología y TI',
-  'Consultoría Profesional',
-  'Otro',
+  'SALUD_Y_BIENESTAR',
+  'BELLEZA',
+  'HOGAR',
+  'EDUCACION',
+  'TECNOLOGIA',
+  'GASTRONOMIA',
+  'OTROS',
 ];
+
+const CATEGORIAS_LABELS: Record<string, string> = {
+  SALUD_Y_BIENESTAR: 'Salud y Bienestar',
+  BELLEZA: 'Belleza',
+  HOGAR: 'Hogar',
+  EDUCACION: 'Educacion',
+  TECNOLOGIA: 'Tecnologia',
+  GASTRONOMIA: 'Gastronomia',
+  OTROS: 'Otros',
+};
 
 const STEPS = [{ label: 'Datos del negocio' }, { label: 'Cuenta y contacto' }];
 
 export default function RegistroProveedor() {
-  const { navigate, registerProvider } = useAuth();
+  const { navigate, registerProvider, verifyCode, resendCode, showNotification } = useAuth();
   const [screen, setScreen] = useState<Screen>('paso1');
   const [loading, setLoading] = useState(false);
 
@@ -56,6 +64,7 @@ export default function RegistroProveedor() {
     nombreNegocio: '',
     categoria: '',
     descripcion: '',
+    direccion: '',
   });
 
   const [contacto, setContacto] = useState<FormPaso2>({
@@ -71,8 +80,8 @@ export default function RegistroProveedor() {
   const [errors2, setErrors2] = useState<Errors>({});
   const [verificationCode, setVerificationCode] = useState('');
   const [verificationError, setVerificationError] = useState('');
+  const [resentMessage, setResentMessage] = useState('');
 
-  // ─── Validación Paso 1 ─────────────────────────
   const validatePaso1 = (): boolean => {
     const e: Errors = {};
     if (!negocio.nombreNegocio.trim()) e.nombreNegocio = 'El nombre del negocio es obligatorio.';
@@ -81,11 +90,11 @@ export default function RegistroProveedor() {
     else if (negocio.descripcion.trim().length < 20) {
       e.descripcion = 'La descripción debe tener al menos 20 caracteres.';
     }
+    if (!negocio.direccion.trim()) e.direccion = 'La dirección es obligatoria.';
     setErrors1(e);
     return Object.keys(e).length === 0;
   };
 
-  // ─── Validación Paso 2 ─────────────────────────
   const validatePaso2 = (): boolean => {
     const e: Errors = {};
     if (!contacto.nombreContacto.trim()) e.nombreContacto = 'El nombre de contacto es obligatorio.';
@@ -112,9 +121,34 @@ export default function RegistroProveedor() {
     if (validatePaso1()) setScreen('paso2');
   };
 
-  const handleNextPaso2 = (e: React.FormEvent) => {
+  const handleNextPaso2 = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (validatePaso2()) setScreen('verificacion');
+    if (!validatePaso2()) return;
+
+    setLoading(true);
+    try {
+      await registerProvider({
+        firstName: contacto.nombreContacto.trim().split(' ')[0] || '',
+        lastName: contacto.nombreContacto.trim().split(' ').slice(1).join(' ') || '',
+        email: contacto.email.trim().toLowerCase(),
+        phone: contacto.telefono.trim(),
+        password: contacto.contrasena,
+        termsAccepted: contacto.terminos,
+        businessName: negocio.nombreNegocio.trim(),
+        businessCategory: negocio.categoria,
+        businessDescription: negocio.descripcion.trim(),
+        address: negocio.direccion.trim(),
+      });
+      setScreen('verificacion');
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        setErrors2({ submit: err.message });
+      } else {
+        setErrors2({ submit: 'Error al registrar. Intenta de nuevo.' });
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleVerify = async (e: React.FormEvent) => {
@@ -125,28 +159,31 @@ export default function RegistroProveedor() {
     }
 
     setLoading(true);
+    setVerificationError('');
     try {
-      const providerData: RegisterProviderDTO = {
-        businessName: negocio.nombreNegocio,
-        category: negocio.categoria,
-        description: negocio.descripcion,
-        contactName: contacto.nombreContacto,
-        email: contacto.email,
-        phone: contacto.telefono,
-        password: contacto.contrasena,
-        termsAccepted: contacto.terminos,
-      };
-
-      await registerProvider(providerData);
+      await verifyCode(contacto.email.trim().toLowerCase(), verificationCode.trim());
       setScreen('confirmacion');
-    } catch {
-      setVerificationError('Código incorrecto o error al registrar.');
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        setVerificationError(err.message);
+      } else {
+        setVerificationError('Código incorrecto o error al verificar.');
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  // ─── Confirmación ─────────────────────────────
+  const handleResendCode = async () => {
+    try {
+      await resendCode(contacto.email.trim().toLowerCase());
+      setResentMessage('Código reenviado exitosamente a tu correo.');
+      showNotification('success', 'Código reenviado a tu correo electrónico.');
+    } catch {
+      setResentMessage('No se pudo reenviar el código. Intenta de nuevo.');
+    }
+  };
+
   if (screen === 'confirmacion') {
     return (
       <div className="bg-[#f2f3ee] min-h-screen flex flex-col">
@@ -200,7 +237,6 @@ export default function RegistroProveedor() {
     );
   }
 
-  // ─── Verificación ─────────────────────────────
   if (screen === 'verificacion') {
     return (
       <div className="bg-[#f2f3ee] min-h-screen flex flex-col">
@@ -263,6 +299,22 @@ export default function RegistroProveedor() {
               </button>
             </form>
 
+            <div className="mt-6 flex flex-col items-center gap-1">
+              <p className="text-[#66716c] text-[13px]">¿No recibiste el correo?</p>
+              <button
+                type="button"
+                onClick={handleResendCode}
+                className="text-[#005146] text-[13px] font-semibold underline hover:opacity-80 bg-transparent border-none cursor-pointer"
+              >
+                Reenviar código
+              </button>
+              {resentMessage && (
+                <p className="text-[#005146] text-[12px] bg-[#e6f0ef] px-3 py-1 rounded-full mt-2">
+                  {resentMessage}
+                </p>
+              )}
+            </div>
+
             <button
               type="button"
               onClick={() => setScreen('paso2')}
@@ -276,7 +328,6 @@ export default function RegistroProveedor() {
     );
   }
 
-  // ─── Paso 2 ───────────────────────────────────
   if (screen === 'paso2') {
     return (
       <div className="bg-[#f2f3ee] min-h-screen flex flex-col">
@@ -296,6 +347,16 @@ export default function RegistroProveedor() {
             </div>
 
             <StepIndicator steps={STEPS} current={2} />
+
+            {errors2.submit && (
+              <div className="flex gap-3 bg-[#fdf1f0] border border-[#f2bfbb] rounded-[8px] px-4 py-3 mb-5">
+                <svg className="shrink-0 mt-0.5" width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="#d94f41" strokeWidth="1.8" />
+                  <path d="M12 8v4M12 16h.01" stroke="#d94f41" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
+                <p className="text-[#d94f41] text-[13px] leading-[20px]">{errors2.submit}</p>
+              </div>
+            )}
 
             <form onSubmit={handleNextPaso2} noValidate className="flex flex-col gap-4 mt-6">
               <InputField
@@ -324,7 +385,7 @@ export default function RegistroProveedor() {
                 <InputField
                   label="Teléfono de atención"
                   type="tel"
-                  placeholder="+52 55 9876 5432"
+                  placeholder="+57 300 1234567"
                   value={contacto.telefono}
                   onChange={(v) => {
                     setContacto({ ...contacto, telefono: v });
@@ -389,9 +450,19 @@ export default function RegistroProveedor() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 bg-[#005146] hover:bg-[#00403b] text-white font-semibold text-[14px] py-[12px] rounded-[8px] transition-colors cursor-pointer"
+                  disabled={loading}
+                  className="flex-1 bg-[#005146] hover:bg-[#00403b] disabled:opacity-60 text-white font-semibold text-[14px] py-[12px] rounded-[8px] transition-colors cursor-pointer flex items-center justify-center gap-2"
                 >
-                  Finalizar registro
+                  {loading ? (
+                    <>
+                      <svg className="animate-spin" width="15" height="15" viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="10" stroke="white" strokeWidth="3" strokeDasharray="32" strokeDashoffset="12" strokeLinecap="round" />
+                      </svg>
+                      Registrando...
+                    </>
+                  ) : (
+                    'Finalizar registro'
+                  )}
                 </button>
               </div>
             </form>
@@ -401,14 +472,12 @@ export default function RegistroProveedor() {
     );
   }
 
-  // ─── Paso 1 ───────────────────────────────────
   return (
     <div className="bg-[#f2f3ee] min-h-screen flex flex-col">
       <NavBar />
 
       <main className="flex-1 flex items-center justify-center py-12 px-4">
         <div className="bg-[#fcfcf8] rounded-[16px] border border-[#d4d9d3] shadow-sm w-full max-w-[580px] p-8 md:p-10">
-          {/* Card para clientes arriba del todo para evitar confusiones */}
           <div className="mb-6 p-4 rounded-[12px] bg-[#e6f0ef] border border-[#b8d4d1] flex flex-col sm:flex-row items-center justify-between gap-3 text-left">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-[#005146] text-white flex items-center justify-center shrink-0">
@@ -464,7 +533,7 @@ export default function RegistroProveedor() {
                 setNegocio({ ...negocio, categoria: v });
                 setErrors1({ ...errors1, categoria: '' });
               }}
-              options={CATEGORIAS.map((c) => ({ value: c, label: c }))}
+              options={CATEGORIAS.map((c) => ({ value: c, label: CATEGORIAS_LABELS[c] || c }))}
               placeholder="Selecciona una categoría..."
               error={errors1.categoria}
             />
@@ -480,6 +549,17 @@ export default function RegistroProveedor() {
               error={errors1.descripcion}
               hint="Mínimo 20 caracteres."
               maxLength={300}
+            />
+
+            <InputField
+              label="Dirección del negocio"
+              placeholder="Calle 123 #45-67, Ciudad"
+              value={negocio.direccion}
+              onChange={(v) => {
+                setNegocio({ ...negocio, direccion: v });
+                setErrors1({ ...errors1, direccion: '' });
+              }}
+              error={errors1.direccion}
             />
 
             <div className="flex gap-3 bg-[#e6f0ef] border border-[#b8d4d1] rounded-[8px] px-4 py-3">

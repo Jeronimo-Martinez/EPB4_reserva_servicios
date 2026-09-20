@@ -1,0 +1,20 @@
+$kind: http-request
+name: Login Contraseña Vacía
+order: 5000
+method: POST
+url: '{{baseUrl}}/api/v1/auth/login'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "cliente.demo@example.com",
+      "password": ""
+    }
+events:
+  - listen: test
+    script:
+      exec:
+        - pm.test("Status code is 400", () => pm.response.to.have.status(400));

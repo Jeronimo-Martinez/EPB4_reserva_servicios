@@ -1,176 +1,81 @@
+import { request } from '@/api/client';
 import {
   LoginCredentials,
   LoginResponse,
   RegisterClientDTO,
   RegisterClientResponse,
+  RegisterProviderDTO,
   VerifyCodeDTO,
   VerifyCodeResponse,
-  User,
-  UserRole,
+  ResendCodeDTO,
+  ResendCodeResponse,
 } from '@/types/auth';
 
-const MOCK_USERS_KEY = 'promarket_mock_registered_users';
-
-const INITIAL_MOCK_USERS: Record<string, { password: string; user: User }> = {
-  'cliente.demo@example.com': {
-    password: 'Cliente123',
-    user: {
-      id: 'usr-client-demo',
-      email: 'cliente.demo@example.com',
-      firstName: 'Ana',
-      lastName: 'Gómez',
-      phone: '+57 300 123 4567',
-      role: 'CLIENTE',
-      isVerified: true,
-    },
-  },
-  'maria.gonzalez@ejemplo.com': {
-    password: 'Cliente1!',
-    user: {
-      id: 'usr-client-maria',
-      email: 'maria.gonzalez@ejemplo.com',
-      firstName: 'María',
-      lastName: 'González',
-      phone: '+52 55 1234 5678',
-      role: 'CLIENTE',
-      isVerified: true,
-    },
-  },
-  'contacto@centrovital.com': {
-    password: 'Proveedor1!',
-    user: {
-      id: 'usr-prov-centro',
-      email: 'contacto@centrovital.com',
-      firstName: 'Carlos',
-      lastName: 'Mendoza',
-      businessName: 'Centro Vital Salud y Bienestar',
-      businessCategory: 'Salud y Bienestar',
-      phone: '+52 55 9876 5432',
-      role: 'PROVEEDOR',
-      isVerified: true,
-    },
-  },
-};
-
-function getMockUsers(): Record<string, { password: string; user: User }> {
-  try {
-    const raw = localStorage.getItem(MOCK_USERS_KEY);
-    if (!raw) {
-      localStorage.setItem(MOCK_USERS_KEY, JSON.stringify(INITIAL_MOCK_USERS));
-      return INITIAL_MOCK_USERS;
-    }
-    return JSON.parse(raw);
-  } catch {
-    return INITIAL_MOCK_USERS;
-  }
-}
-
-function saveMockUser(email: string, pass: string, user: User) {
-  try {
-    const all = getMockUsers();
-    all[email.toLowerCase()] = { password: pass, user };
-    localStorage.setItem(MOCK_USERS_KEY, JSON.stringify(all));
-  } catch (e) {
-    console.error('Error guardando usuario simulado', e);
-  }
-}
-
-// Simulación de delay de red para realismo UI/UX
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
 export async function loginApi(credentials: LoginCredentials): Promise<LoginResponse> {
-  await delay(400);
-
-  const emailClean = credentials.email.trim().toLowerCase();
-  const allUsers = getMockUsers();
-  const existing = allUsers[emailClean];
-
-  if (existing) {
-    if (existing.password === credentials.password) {
-      return {
-        message: 'Inicio de sesión exitoso',
-        email: existing.user.email,
-        role: existing.user.role,
-        redirectTo: existing.user.role === 'CLIENTE' ? '/catalogo' : '/servicios',
-        user: existing.user,
-      };
-    } else {
-      throw new Error('Correo electrónico o contraseña incorrectos.');
-    }
-  }
-
-  // Si ingresa una cuenta libre para prueba rápida
-  const role: UserRole =
-    emailClean.includes('proveedor') || emailClean.includes('negocio')
-      ? 'PROVEEDOR'
-      : 'CLIENTE';
-
-  const newUser: User = {
-    id: `usr-${Date.now()}`,
-    email: emailClean,
-    firstName: emailClean.split('@')[0].charAt(0).toUpperCase() + emailClean.split('@')[0].slice(1),
-    role,
-    isVerified: true,
-    businessName: role === 'PROVEEDOR' ? 'Mi Negocio Profesional' : undefined,
-    businessCategory: role === 'PROVEEDOR' ? 'Salud y Bienestar' : undefined,
-  };
-
-  saveMockUser(emailClean, credentials.password, newUser);
-
-  return {
-    message: 'Inicio de sesión exitoso',
-    email: newUser.email,
-    role: newUser.role,
-    redirectTo: newUser.role === 'CLIENTE' ? '/catalogo' : '/servicios',
-    user: newUser,
-  };
+  return request<LoginResponse>('/api/v1/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({
+      email: credentials.email.trim().toLowerCase(),
+      password: credentials.password,
+    }),
+  });
 }
 
 export async function registerClientApi(
   data: RegisterClientDTO
 ): Promise<RegisterClientResponse> {
-  await delay(350);
-
-  const emailClean = data.email.trim().toLowerCase();
-  const newUser: User = {
-    id: `usr-client-${Date.now()}`,
-    email: emailClean,
-    firstName: data.firstName,
-    lastName: data.lastName,
-    phone: data.phone,
-    role: 'CLIENTE',
-    isVerified: false,
-  };
-
-  saveMockUser(emailClean, data.password, newUser);
-
-  return {
-    message: 'Código de verificación generado con éxito.',
-    email: emailClean,
-    verificationRequired: true,
-  };
+  return request<RegisterClientResponse>('/api/v1/registrations', {
+    method: 'POST',
+    body: JSON.stringify({
+      firstName: data.firstName.trim(),
+      lastName: data.lastName?.trim() || '',
+      email: data.email.trim().toLowerCase(),
+      phone: data.phone.trim(),
+      password: data.password,
+      termsAccepted: data.termsAccepted,
+    }),
+  });
 }
 
-export async function verifyClientCodeApi(
+export async function registerProviderApi(
+  data: RegisterProviderDTO
+): Promise<RegisterClientResponse> {
+  return request<RegisterClientResponse>('/api/v1/registrations/provider', {
+    method: 'POST',
+    body: JSON.stringify({
+      firstName: data.firstName.trim(),
+      lastName: data.lastName?.trim() || '',
+      email: data.email.trim().toLowerCase(),
+      phone: data.phone.trim(),
+      password: data.password,
+      termsAccepted: data.termsAccepted,
+      businessName: data.businessName.trim(),
+      businessCategory: data.businessCategory,
+      businessDescription: data.businessDescription.trim(),
+      address: data.address.trim(),
+    }),
+  });
+}
+
+export async function verifyCodeApi(
   data: VerifyCodeDTO
 ): Promise<VerifyCodeResponse> {
-  await delay(300);
+  return request<VerifyCodeResponse>('/api/v1/registrations/verify', {
+    method: 'POST',
+    body: JSON.stringify({
+      email: data.email.trim().toLowerCase(),
+      code: data.code.trim(),
+    }),
+  });
+}
 
-  const codeClean = data.code.trim();
-  if (codeClean.length !== 6) {
-    throw new Error('El código debe contener exactamente 6 dígitos.');
-  }
-
-  const allUsers = getMockUsers();
-  const emailClean = data.email.trim().toLowerCase();
-  if (allUsers[emailClean]) {
-    allUsers[emailClean].user.isVerified = true;
-    localStorage.setItem(MOCK_USERS_KEY, JSON.stringify(allUsers));
-  }
-
-  return {
-    message: 'Cuenta verificada correctamente.',
-    email: emailClean,
-    role: 'CLIENTE',
-  };
+export async function resendCodeApi(
+  data: ResendCodeDTO
+): Promise<ResendCodeResponse> {
+  return request<ResendCodeResponse>('/api/v1/registrations/resend-code', {
+    method: 'POST',
+    body: JSON.stringify({
+      email: data.email.trim().toLowerCase(),
+    }),
+  });
 }

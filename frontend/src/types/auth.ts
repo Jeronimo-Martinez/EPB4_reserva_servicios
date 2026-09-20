@@ -22,8 +22,6 @@ export interface LoginResponse {
   email: string;
   role: UserRole;
   redirectTo: string;
-  token?: string;
-  user?: User;
 }
 
 export interface RegisterClientDTO {
@@ -52,13 +50,24 @@ export interface VerifyCodeResponse {
   role: UserRole;
 }
 
+export interface ResendCodeDTO {
+  email: string;
+}
+
+export interface ResendCodeResponse {
+  message: string;
+  email: string;
+}
+
 export interface RegisterProviderDTO {
-  businessName: string;
-  category: string;
-  description: string;
-  contactName: string;
+  firstName: string;
+  lastName?: string;
   email: string;
   phone: string;
   password: string;
   termsAccepted: boolean;
+  businessName: string;
+  businessCategory: string;
+  businessDescription: string;
+  address: string;
 }

@@ -1,0 +1,32 @@
+$kind: http-request
+name: Registrar Proveedor
+order: 1000
+method: POST
+url: '{{baseUrl}}/api/v1/registrations/provider'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "firstName": "Carlos",
+      "lastName": "Lopez",
+      "email": "{{testProviderEmail}}",
+      "phone": "+573009876543",
+      "password": "{{testPassword}}",
+      "termsAccepted": true,
+      "businessName": "Mi Negocio Test",
+      "businessCategory": "BELLEZA",
+      "businessDescription": "Servicios de belleza test",
+      "address": "Calle 123 #45-67"
+    }
+events:
+  - listen: test
+    script:
+      exec:
+        - pm.test("Status code is 201", () => pm.response.to.have.status(201));
+        - "const res = pm.response.json();"
+        - pm.test("Response has message", () => pm.expect(res).to.have.property("message"));
+        - pm.test("Verification required is true", () => pm.expect(res.verificationRequired).to.be.true);
+        - pm.environment.set("testProviderEmail", res.email);

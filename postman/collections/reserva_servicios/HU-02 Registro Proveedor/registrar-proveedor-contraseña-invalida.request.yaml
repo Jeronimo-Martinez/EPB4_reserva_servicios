@@ -1,0 +1,30 @@
+$kind: http-request
+name: Registrar Proveedor - Contraseña Inválida
+order: 3000
+method: POST
+url: '{{baseUrl}}/api/v1/registrations/provider'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "firstName": "Carlos",
+      "lastName": "Lopez",
+      "email": "test.proveedor.pass@example.com",
+      "phone": "+573009876543",
+      "password": "abc",
+      "termsAccepted": true,
+      "businessName": "Negocio Test",
+      "businessCategory": "HOGAR",
+      "businessDescription": "Test",
+      "address": "Calle 123"
+    }
+events:
+  - listen: test
+    script:
+      exec:
+        - pm.test("Status code is 400", () => pm.response.to.have.status(400));
+        - "const res = pm.response.json();"
+        - pm.test("Error message about password", () => pm.expect(res.message).to.exist);

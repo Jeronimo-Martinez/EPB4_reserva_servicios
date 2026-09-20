@@ -1,0 +1,30 @@
+$kind: http-request
+name: Crear Servicio
+order: 1000
+method: POST
+url: '{{baseUrl}}/api/v1/services'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "providerEmail": "centro.vital@example.com",
+      "name": "Servicio Test Postman",
+      "category": "BELLEZA",
+      "description": "Servicio creado desde Postman",
+      "durationMinutes": 60,
+      "price": 50000,
+      "available": true
+    }
+events:
+  - listen: test
+    script:
+      exec:
+        - pm.test("Status code is 201", () => pm.response.to.have.status(201));
+        - "const res = pm.response.json();"
+        - pm.test("Response has id", () => pm.expect(res).to.have.property("id"));
+        - pm.test("Name matches", () => pm.expect(res.name).to.equal("Servicio Test Postman"));
+        - pm.test("Price matches", () => pm.expect(res.price).to.equal(50000));
+        - pm.environment.set("createdServiceId", res.id);
