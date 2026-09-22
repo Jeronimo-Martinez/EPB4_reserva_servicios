@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { NavBar } from '@/components/layout';
 import { InputField, PasswordStrength, FieldError } from '@/components/ui';
 import { useAuth } from '@/context/AuthContext';
-import { registerClientApi, verifyClientCodeApi } from '@/api/auth';
+import { registerClientApi } from '@/api/auth';
 import { ApiError } from '@/api/client';
 
 type Screen = 'registro' | 'verificacion' | 'confirmacion';
@@ -22,12 +22,11 @@ interface Errors {
 }
 
 export default function RegistroCliente() {
-  const { navigate, registerClient } = useAuth();
+  const { navigate, verifyCode, resendCode } = useAuth();
   const [screen, setScreen] = useState<Screen>('registro');
   const [loading, setLoading] = useState(false);
   const [globalError, setGlobalError] = useState('');
 
-  // Form state
   const [form, setForm] = useState<FormData>({
     nombre: '',
     apellido: '',
@@ -39,7 +38,6 @@ export default function RegistroCliente() {
   });
   const [errors, setErrors] = useState<Errors>({});
 
-  // Verification state
   const [code, setCode] = useState('');
   const [codeError, setCodeError] = useState('');
   const [resentMessage, setResentMessage] = useState('');
@@ -58,11 +56,7 @@ export default function RegistroCliente() {
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
       e.email = 'Ingresa un correo electrónico válido.';
     }
-
-    if (!form.telefono.trim()) {
-      e.telefono = 'El teléfono es obligatorio.';
-    }
-
+    if (!form.telefono.trim()) e.telefono = 'El teléfono es obligatorio.';
     if (!form.contrasena) {
       e.contrasena = 'La contraseña es obligatoria.';
     } else if (
@@ -70,20 +64,14 @@ export default function RegistroCliente() {
       !/[A-Z]/.test(form.contrasena) ||
       !/[0-9]/.test(form.contrasena)
     ) {
-      e.contrasena =
-        'Mínimo 8 caracteres, al menos una mayúscula y al menos un número.';
+      e.contrasena = 'Mínimo 8 caracteres, al menos una mayúscula y al menos un número.';
     }
-
     if (!form.confirmarContrasena) {
       e.confirmarContrasena = 'Confirma tu contraseña.';
     } else if (form.contrasena !== form.confirmarContrasena) {
       e.confirmarContrasena = 'Las contraseñas no coinciden.';
     }
-
-    if (!form.terminos) {
-      e.terminos = 'Debes aceptar los términos y condiciones.';
-    }
-
+    if (!form.terminos) e.terminos = 'Debes aceptar los términos y condiciones.';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -104,7 +92,6 @@ export default function RegistroCliente() {
         password: form.contrasena,
         termsAccepted: form.terminos,
       });
-
       setScreen('verificacion');
     } catch (err: unknown) {
       if (err instanceof ApiError) {
@@ -128,21 +115,7 @@ export default function RegistroCliente() {
     setCodeError('');
 
     try {
-      await verifyClientCodeApi({
-        email: form.email.trim().toLowerCase(),
-        code: code.trim(),
-      });
-
-      // Crear usuario activo en AuthContext
-      await registerClient({
-        firstName: form.nombre.trim(),
-        lastName: form.apellido.trim(),
-        email: form.email.trim().toLowerCase(),
-        phone: form.telefono.trim(),
-        password: form.contrasena,
-        termsAccepted: form.terminos,
-      });
-
+      await verifyCode(form.email.trim().toLowerCase(), code.trim());
       setScreen('confirmacion');
     } catch (err: unknown) {
       if (err instanceof ApiError) {
@@ -155,7 +128,15 @@ export default function RegistroCliente() {
     }
   };
 
-  // ─── Pantalla 3: Confirmación ─────────────────
+  const handleResendCode = async () => {
+    try {
+      await resendCode(form.email.trim().toLowerCase());
+      setResentMessage('Código reenviado exitosamente a tu correo.');
+    } catch {
+      setResentMessage('No se pudo reenviar el código. Intenta de nuevo.');
+    }
+  };
+
   if (screen === 'confirmacion') {
     return (
       <div className="bg-[#f2f3ee] min-h-screen flex flex-col">
@@ -209,7 +190,6 @@ export default function RegistroCliente() {
     );
   }
 
-  // ─── Pantalla 2: Verificación de Código ───────
   if (screen === 'verificacion') {
     return (
       <div className="bg-[#f2f3ee] min-h-screen flex flex-col">
@@ -278,7 +258,7 @@ export default function RegistroCliente() {
               <p className="text-[#66716c] text-[13px]">¿No recibiste el correo?</p>
               <button
                 type="button"
-                onClick={() => setResentMessage('Código reenviado exitosamente a tu correo.')}
+                onClick={handleResendCode}
                 className="text-[#005146] text-[13px] font-semibold underline hover:opacity-80 bg-transparent border-none cursor-pointer"
               >
                 Reenviar código
@@ -303,14 +283,12 @@ export default function RegistroCliente() {
     );
   }
 
-  // ─── Pantalla 1: Formulario Registro ──────────
   return (
     <div className="bg-[#f2f3ee] min-h-screen flex flex-col">
       <NavBar />
 
       <main className="flex-1 flex items-center justify-center py-12 px-4">
         <div className="bg-[#fcfcf8] rounded-[16px] border border-[#d4d9d3] shadow-sm w-full max-w-[560px] p-8 md:p-10">
-          {/* Card para proveedores arriba del todo para evitar confusiones */}
           <div className="mb-6 p-4 rounded-[12px] bg-[#e6f0ef] border border-[#b8d4d1] flex flex-col sm:flex-row items-center justify-between gap-3 text-left">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-[#005146] text-white flex items-center justify-center shrink-0">

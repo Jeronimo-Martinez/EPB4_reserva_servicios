@@ -1,0 +1,28 @@
+$kind: http-request
+name: Registrar Cliente
+order: 1000
+method: POST
+url: '{{baseUrl}}/api/v1/registrations'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "firstName": "Ana",
+      "lastName": "Gomez",
+      "email": "{{testClientEmail}}",
+      "phone": "+573001234567",
+      "password": "{{testPassword}}",
+      "termsAccepted": true
+    }
+events:
+  - listen: test
+    script:
+      exec:
+        - pm.test("Status code is 201", () => pm.response.to.have.status(201));
+        - "const res = pm.response.json();"
+        - pm.test("Response has message", () => pm.expect(res).to.have.property("message"));
+        - pm.test("Verification required is true", () => pm.expect(res.verificationRequired).to.be.true);
+        - pm.environment.set("testClientEmail", res.email);

@@ -5,6 +5,7 @@ import {
   Servicio,
   FormServicio as FormServicioType,
   CATEGORIAS_SERVICIO,
+  CATEGORIAS_SERVICIO_LABELS,
   DURACIONES_SERVICIO,
   fmtDuracion,
 } from "../types";
@@ -22,7 +23,7 @@ export default function FormServicio({ editing, onSave, onCancel }: FormServicio
     nombre: editing?.nombre ?? "",
     categoria: editing?.categoria ?? "",
     duracion: editing ? String(editing.duracion) : "",
-    precio: editing ? String(editing.precio / 100) : "",
+    precio: editing ? String(editing.precio) : "",
     descripcion: editing?.descripcion ?? "",
     activo: editing?.activo ?? true,
   });
@@ -92,7 +93,7 @@ export default function FormServicio({ editing, onSave, onCancel }: FormServicio
           hint="Este nombre aparecerá en el catálogo visible para los clientes." />
         <SelectField label="Categoría" value={form.categoria}
           onChange={set("categoria") as (v: string) => void}
-          options={CATEGORIAS_SERVICIO.map((c) => ({ value: c, label: c }))}
+          options={CATEGORIAS_SERVICIO.map((c) => ({ value: c, label: CATEGORIAS_SERVICIO_LABELS[c] || c }))}
           placeholder="Selecciona una categoría..." error={errors.categoria} />
         <TextareaField label="Descripción (opcional)" value={form.descripcion}
           onChange={set("descripcion") as (v: string) => void}

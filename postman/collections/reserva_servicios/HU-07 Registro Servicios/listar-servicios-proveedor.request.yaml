@@ -1,0 +1,23 @@
+$kind: http-request
+name: Listar Servicios del Proveedor
+order: 5000
+method: GET
+url: '{{baseUrl}}/api/v1/services?providerEmail=centro.vital@example.com'
+headers:
+  - key: Content-Type
+    value: application/json
+events:
+  - listen: test
+    script:
+      exec:
+        - pm.test("Status code is 200", () => pm.response.to.have.status(200));
+        - "const res = pm.response.json();"
+        - pm.test("Response is an array", () => pm.expect(res).to.be.an("array"));
+        - pm.test("Has services", () => pm.expect(res.length).to.be.above(0));
+        - pm.test("Each service has name, durationMinutes, price", () => {
+            res.forEach(s => {
+              pm.expect(s).to.have.property("name");
+              pm.expect(s).to.have.property("durationMinutes");
+              pm.expect(s).to.have.property("price");
+            });
+          });

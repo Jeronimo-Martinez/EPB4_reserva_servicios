@@ -2,18 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { NavBar } from '@/components/layout';
 import { EmptyState } from '@/components/ui';
 import { useAuth } from '@/context/AuthContext';
-import { Service, ServiceCategory, ServiceBookingRequest } from '@/types/service';
-import { fetchAllServices, bookAppointment, getStoredBookings, saveStoredBookings } from '@/api/services';
+import { Service, ServiceCategory } from '@/types/service';
+import { fetchCatalogServices } from '@/api/services';
+import { ApiError } from '@/api/client';
 
 const CATEGORIES: ServiceCategory[] = [
   'Todas',
   'Salud y Bienestar',
-  'Belleza y Estética',
-  'Entrenamiento Físico',
-  'Reparaciones del Hogar',
-  'Educación y Tutorías',
-  'Tecnología y TI',
-  'Consultoría Profesional',
+  'Belleza',
+  'Hogar',
+  'Educacion',
+  'Tecnologia',
+  'Gastronomia',
+  'Otros',
 ];
 
 interface CatalogoServiciosProps {
@@ -23,7 +24,6 @@ interface CatalogoServiciosProps {
 export default function CatalogoServicios({ initialView = 'catalogo' }: CatalogoServiciosProps) {
   const { user, navigate, showNotification } = useAuth();
   const [services, setServices] = useState<Service[]>([]);
-  const [bookings, setBookings] = useState(getStoredBookings());
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<ServiceCategory>('Todas');
   const [searchQuery, setSearchQuery] = useState('');
@@ -43,8 +43,8 @@ export default function CatalogoServicios({ initialView = 'catalogo' }: Catalogo
   const loadServices = async () => {
     setLoading(true);
     try {
-      const data = await fetchAllServices();
-      setServices(data);
+      const data = await fetchCatalogServices();
+      setServices(data.items || []);
     } catch (e) {
       console.error(e);
     } finally {
@@ -76,34 +76,14 @@ export default function CatalogoServicios({ initialView = 'catalogo' }: Catalogo
 
     setBookingSubmitting(true);
     try {
-      const req: ServiceBookingRequest = {
-        serviceId: selectedService.id,
-        serviceName: selectedService.name,
-        clientEmail: user?.email || 'cliente@ejemplo.com',
-        clientName: user ? `${user.firstName} ${user.lastName || ''}`.trim() : 'Cliente',
-        date: bookingForm.date,
-        timeSlot: bookingForm.timeSlot,
-        notes: bookingForm.notes,
-      };
-
-      const result = await bookAppointment(req);
-      showNotification('success', result.message);
+      showNotification('success', 'Funcionalidad de reservas próximamente disponible.');
       setSelectedService(null);
-      setBookings(getStoredBookings());
-      navigate('reservas');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'No se pudo completar la reserva.';
       showNotification('error', msg);
     } finally {
       setBookingSubmitting(false);
     }
-  };
-
-  const handleCancelBooking = (bookingId: string) => {
-    const updated = bookings.filter((b) => b.id !== bookingId);
-    saveStoredBookings(updated);
-    setBookings(updated);
-    showNotification('info', 'La reserva ha sido cancelada.');
   };
 
   const isReservasView = initialView === 'reservas';
@@ -113,7 +93,6 @@ export default function CatalogoServicios({ initialView = 'catalogo' }: Catalogo
       <NavBar />
 
       <main className="flex-1 max-w-[1440px] w-full mx-auto px-6 lg:px-10 py-8">
-        {/* Banner superior promocional: SOLO cuando el usuario NO está logeado y en vista catálogo */}
         {!user && !isReservasView && (
           <div className="bg-[#005146] text-white rounded-[16px] p-8 md:p-10 mb-8 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-6 animate-fade-in">
             <div className="max-w-[650px]">
@@ -140,7 +119,6 @@ export default function CatalogoServicios({ initialView = 'catalogo' }: Catalogo
           </div>
         )}
 
-        {/* Encabezado limpio para usuario logeado en catálogo */}
         {user && !isReservasView && (
           <div className="mb-6 animate-fade-in">
             <h1 className="text-[26px] md:text-[30px] font-bold text-[#18211e] tracking-tight">
@@ -152,7 +130,6 @@ export default function CatalogoServicios({ initialView = 'catalogo' }: Catalogo
           </div>
         )}
 
-        {/* Encabezado para vista de reservas */}
         {isReservasView && (
           <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 animate-fade-in">
             <div>
@@ -182,7 +159,6 @@ export default function CatalogoServicios({ initialView = 'catalogo' }: Catalogo
 
         {!isReservasView ? (
           <>
-            {/* Barra de Búsqueda y Filtros */}
             <div className="bg-[#fcfcf8] border border-[#d4d9d3] rounded-[12px] p-4 md:p-6 mb-8 shadow-xs flex flex-col gap-4">
               <div className="relative w-full">
                 <svg
@@ -197,7 +173,7 @@ export default function CatalogoServicios({ initialView = 'catalogo' }: Catalogo
                 </svg>
                 <input
                   type="text"
-                  placeholder="Buscar por servicio, negocio o palabra clave (ej. Masaje, Plomería, Tutoría)..."
+                  placeholder="Buscar por servicio, negocio o palabra clave..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-12 pr-4 py-3 bg-white border border-[#d4d9d3] rounded-[8px] text-[15px] outline-none focus:border-[#005146] transition-colors text-[#18211e]"
@@ -213,7 +189,6 @@ export default function CatalogoServicios({ initialView = 'catalogo' }: Catalogo
                 )}
               </div>
 
-              {/* Pastillas de Categorías */}
               <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
                 {CATEGORIES.map((cat) => {
                   const active = selectedCategory === cat;
@@ -236,7 +211,6 @@ export default function CatalogoServicios({ initialView = 'catalogo' }: Catalogo
               </div>
             </div>
 
-            {/* Lista de Servicios */}
             <div className="mb-12">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-[20px] font-bold text-[#18211e]">
@@ -297,11 +271,11 @@ export default function CatalogoServicios({ initialView = 'catalogo' }: Catalogo
                           <span className="text-[12px] font-semibold text-[#005146] bg-[#e6f0ef] px-2.5 py-1 rounded-full border border-[#b8d4d1]">
                             {srv.category}
                           </span>
-                          {srv.rating && (
+                          {srv.averageRating != null && srv.averageRating > 0 && (
                             <div className="flex items-center gap-1 text-[13px] font-semibold text-[#18211e]">
                               <span className="text-amber-500">★</span>
-                              <span>{srv.rating.toFixed(1)}</span>
-                              <span className="text-[#66716c] text-[12px]">({srv.reviewsCount})</span>
+                              <span>{srv.averageRating.toFixed(1)}</span>
+                              <span className="text-[#66716c] text-[12px]">({srv.reviewCount})</span>
                             </div>
                           )}
                         </div>
@@ -330,7 +304,7 @@ export default function CatalogoServicios({ initialView = 'catalogo' }: Catalogo
                           <div className="text-right">
                             <span className="text-[12px] text-[#66716c] block">Precio</span>
                             <span className="text-[20px] font-bold text-[#005146]">
-                              ${srv.price.toFixed(2)}
+                              ${srv.price.toLocaleString('es-CO')}
                             </span>
                           </div>
                         </div>
@@ -338,15 +312,15 @@ export default function CatalogoServicios({ initialView = 'catalogo' }: Catalogo
                         <button
                           type="button"
                           onClick={() => handleOpenBooking(srv)}
-                          disabled={!srv.isAvailable}
+                          disabled={!srv.available}
                           className={`w-full py-2.5 rounded-[8px] text-[14px] font-semibold transition-all duration-150 flex items-center justify-center gap-2 active:scale-95
                             ${
-                              srv.isAvailable
+                              srv.available
                                 ? 'bg-[#005146] hover:bg-[#00403b] text-white cursor-pointer'
                                 : 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
                             }`}
                         >
-                          {srv.isAvailable ? (
+                          {srv.available ? (
                             <>
                               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                                 <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2" />
@@ -366,92 +340,23 @@ export default function CatalogoServicios({ initialView = 'catalogo' }: Catalogo
             </div>
           </>
         ) : (
-          /* Vista: Mis Reservas */
           <div className="mb-12 animate-fade-in">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-[22px] font-bold text-[#18211e]">
-                Mis Reservas Agendadas
-              </h2>
-              <span className="text-[14px] text-[#66716c]">
-                {bookings.length} reserva{bookings.length === 1 ? '' : 's'} en total
-              </span>
-            </div>
-
-            {bookings.length === 0 ? (
-              <EmptyState
-                icon={
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-                    <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.8" />
-                    <path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="1.8" />
-                  </svg>
-                }
-                title="Aún no tienes citas agendadas"
-                description="Explora nuestro catálogo para descubrir profesionales calificados y agendar tu primera cita cuando lo necesites."
-                actionText="Explorar catálogo de servicios"
-                onAction={() => navigate('catalogo')}
-              />
-            ) : (
-              <div className="flex flex-col gap-4">
-                {bookings.map((b) => (
-                  <div
-                    key={b.id}
-                    className="bg-[#fcfcf8] border border-[#d4d9d3] rounded-[12px] p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all duration-200 hover:shadow-md"
-                  >
-                    <div>
-                      <div className="flex items-center gap-3 mb-1.5">
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[12px] font-semibold bg-[#e6f0ef] text-[#005146] border border-[#b8d4d1]">
-                          ● {b.status}
-                        </span>
-                        <span className="text-[13px] text-[#66716c]">
-                          Cliente: <strong>{b.clientName}</strong>
-                        </span>
-                      </div>
-
-                      <h3 className="text-[18px] font-bold text-[#18211e]">
-                        {b.serviceName}
-                      </h3>
-
-                      <div className="flex flex-wrap items-center gap-4 mt-2 text-[13px] text-[#66716c]">
-                        <span className="flex items-center gap-1.5">
-                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-                            <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2" />
-                            <path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="2" />
-                          </svg>
-                          Fecha: <strong className="text-[#18211e]">{b.date}</strong>
-                        </span>
-                        <span className="flex items-center gap-1.5">
-                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-                            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
-                            <path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="2" />
-                          </svg>
-                          Hora: <strong className="text-[#18211e]">{b.timeSlot}</strong>
-                        </span>
-                        {b.notes && (
-                          <span className="text-gray-500 italic">
-                            "{b.notes}"
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => handleCancelBooking(b.id)}
-                        className="px-4 py-2 border border-[#d4d9d3] hover:border-red-400 text-red-600 hover:bg-red-50 text-[13px] font-semibold rounded-[8px] transition-colors cursor-pointer"
-                      >
-                        Cancelar cita
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            <EmptyState
+              icon={
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                  <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.8" />
+                  <path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="1.8" />
+                </svg>
+              }
+              title="Aún no tienes citas agendadas"
+              description="Explora nuestro catálogo para descubrir profesionales calificados y agendar tu primera cita cuando lo necesites."
+              actionText="Explorar catálogo de servicios"
+              onAction={() => navigate('catalogo')}
+            />
           </div>
         )}
       </main>
 
-      {/* Modal de Reserva de Cita */}
       {selectedService && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 backdrop-blur-xs animate-modal-backdrop">
           <div className="bg-[#fcfcf8] border border-[#d4d9d3] rounded-[16px] max-w-[500px] w-full p-6 md:p-8 shadow-2xl relative animate-modal-pop">
@@ -483,7 +388,7 @@ export default function CatalogoServicios({ initialView = 'catalogo' }: Catalogo
                 </div>
                 <div className="text-right">
                   <span className="text-[#66716c] block text-[12px]">Total a pagar</span>
-                  <strong className="text-[#005146] text-[18px]">${selectedService.price.toFixed(2)}</strong>
+                  <strong className="text-[#005146] text-[18px]">${selectedService.price.toLocaleString('es-CO')}</strong>
                 </div>
               </div>
 

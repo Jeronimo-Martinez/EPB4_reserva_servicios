@@ -1,0 +1,30 @@
+$kind: http-request
+name: Registrar Proveedor - Email Duplicado
+order: 2000
+method: POST
+url: '{{baseUrl}}/api/v1/registrations/provider'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "firstName": "Carlos",
+      "lastName": "Lopez",
+      "email": "centro.vital@example.com",
+      "phone": "+573009876543",
+      "password": "Test1234",
+      "termsAccepted": true,
+      "businessName": "Negocio Duplicado",
+      "businessCategory": "SALUD_Y_BIENESTAR",
+      "businessDescription": "Duplicate test",
+      "address": "Calle 999"
+    }
+events:
+  - listen: test
+    script:
+      exec:
+        - pm.test("Status code is 409", () => pm.response.to.have.status(409));
+        - "const res = pm.response.json();"
+        - pm.test("Error message about duplicate email", () => pm.expect(res.message).to.include("registrado"));

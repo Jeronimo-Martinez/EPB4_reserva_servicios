@@ -58,11 +58,11 @@ hs_err_pid*
 replay_pid*
 
 # Environment variables
-.env
+
 # Node / Frontend
 node_modules/
 **/node_modules/
 **/dist/
 .vite/
-.env.local
+
 

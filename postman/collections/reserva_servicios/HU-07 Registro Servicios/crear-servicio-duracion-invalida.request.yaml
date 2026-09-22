@@ -1,0 +1,27 @@
+$kind: http-request
+name: Crear Servicio - Duración Inválida
+order: 3000
+method: POST
+url: '{{baseUrl}}/api/v1/services'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "providerEmail": "centro.vital@example.com",
+      "name": "Servicio Duración Cero",
+      "category": "HOGAR",
+      "description": "Duración inválida",
+      "durationMinutes": -1,
+      "price": 30000,
+      "available": true
+    }
+events:
+  - listen: test
+    script:
+      exec:
+        - pm.test("Status code is 400", () => pm.response.to.have.status(400));
+        - "const res = pm.response.json();"
+        - pm.test("Error message about duration", () => pm.expect(res.message).to.exist);

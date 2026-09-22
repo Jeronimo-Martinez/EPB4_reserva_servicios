@@ -1,12 +1,18 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import {
   User,
-  UserRole,
   LoginCredentials,
   RegisterClientDTO,
   RegisterProviderDTO,
 } from '@/types/auth';
-import { loginApi, registerClientApi } from '@/api/auth';
+import {
+  loginApi,
+  registerClientApi,
+  registerProviderApi,
+  verifyCodeApi,
+  resendCodeApi,
+} from '@/api/auth';
+import { ApiError } from '@/api/client';
 
 export type AppView =
   | 'landing'
@@ -34,6 +40,8 @@ interface AuthContextType {
   login: (credentials: LoginCredentials) => Promise<void>;
   logout: () => void;
   registerClient: (data: RegisterClientDTO) => Promise<void>;
+  verifyCode: (email: string, code: string) => Promise<{ role: string }>;
+  resendCode: (email: string) => Promise<void>;
   registerProvider: (data: RegisterProviderDTO) => Promise<void>;
   updateUserProfile: (data: Partial<User>) => void;
 }
@@ -79,13 +87,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (credentials: LoginCredentials) => {
     const res = await loginApi(credentials);
-    const loggedUser: User = res.user || {
-      id: `user-${Date.now()}`,
+    const loggedUser: User = {
+      id: `user-${res.email}`,
       email: res.email,
       firstName: res.email.split('@')[0],
       role: res.role,
       isVerified: true,
-      businessName: res.role === 'PROVEEDOR' ? 'Mi Negocio' : undefined,
     };
 
     setUser(loggedUser);
@@ -106,34 +113,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const registerClient = async (data: RegisterClientDTO) => {
     await registerClientApi(data);
+  };
+
+  const verifyCode = async (email: string, code: string) => {
+    const res = await verifyCodeApi({ email, code });
     const newUser: User = {
-      id: `client-${Date.now()}`,
-      email: data.email,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      phone: data.phone,
-      role: 'CLIENTE',
+      id: `user-${res.email}`,
+      email: res.email,
+      firstName: email.split('@')[0],
+      role: res.role as User['role'],
       isVerified: true,
     };
     setUser(newUser);
-    showNotification('success', '¡Cuenta creada y verificada con éxito!');
-    navigate('catalogo');
+    return { role: res.role };
+  };
+
+  const resendCode = async (email: string) => {
+    await resendCodeApi({ email });
   };
 
   const registerProvider = async (data: RegisterProviderDTO) => {
-    const newProvider: User = {
-      id: `provider-${Date.now()}`,
-      email: data.email,
-      firstName: data.contactName,
-      phone: data.phone,
-      role: 'PROVEEDOR',
-      businessName: data.businessName,
-      businessCategory: data.category,
-      isVerified: true,
-    };
-    setUser(newProvider);
-    showNotification('success', `¡Negocio ${data.businessName} registrado con éxito!`);
-    navigate('servicios');
+    await registerProviderApi(data);
   };
 
   const updateUserProfile = (data: Partial<User>) => {
@@ -154,6 +154,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         logout,
         registerClient,
+        verifyCode,
+        resendCode,
         registerProvider,
         updateUserProfile,
       }}

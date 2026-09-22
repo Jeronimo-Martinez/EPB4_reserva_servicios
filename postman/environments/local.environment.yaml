@@ -3,3 +3,15 @@ values:
   - key: baseUrl
     value: 'http://localhost:8080'
     enabled: true
+  - key: testClientEmail
+    value: ''
+    enabled: true
+  - key: testProviderEmail
+    value: ''
+    enabled: true
+  - key: testPassword
+    value: 'Test1234'
+    enabled: true
+  - key: verificationCode
+    value: ''
+    enabled: true

@@ -2,8 +2,8 @@ export interface Servicio {
   id: string;
   nombre: string;
   categoria: string;
-  duracion: number; // minutos
-  precio: number;   // centavos
+  duracion: number;
+  precio: number;
   descripcion: string;
   activo: boolean;
 }
@@ -17,8 +17,8 @@ export interface FormServicio {
   activo: boolean;
 }
 
-export function fmtPrecio(cents: number) {
-  return `$ ${(cents / 100).toLocaleString("es-CO", { minimumFractionDigits: 2 })}`;
+export function fmtPrecio(amount: number) {
+  return `$ ${amount.toLocaleString("es-CO", { minimumFractionDigits: 2 })}`;
 }
 
 export function fmtDuracion(min: number) {
@@ -29,10 +29,19 @@ export function fmtDuracion(min: number) {
 }
 
 export const CATEGORIAS_SERVICIO = [
-  "Corte y estilizado", "Coloración", "Tratamiento capilar", "Masaje terapéutico",
-  "Masaje descontracturante", "Limpieza facial", "Manicura y pedicura",
-  "Depilación", "Consulta nutricional", "Entrenamiento personal", "Otro",
+  "SALUD_Y_BIENESTAR", "BELLEZA", "HOGAR", "EDUCACION",
+  "TECNOLOGIA", "GASTRONOMIA", "OTROS",
 ];
+
+export const CATEGORIAS_SERVICIO_LABELS: Record<string, string> = {
+  SALUD_Y_BIENESTAR: "Salud y Bienestar",
+  BELLEZA: "Belleza",
+  HOGAR: "Hogar",
+  EDUCACION: "Educacion",
+  TECNOLOGIA: "Tecnologia",
+  GASTRONOMIA: "Gastronomia",
+  OTROS: "Otros",
+};
 
 export const DURACIONES_SERVICIO = [
   { value: "30", label: "30 min" }, { value: "45", label: "45 min" },
@@ -42,7 +51,7 @@ export const DURACIONES_SERVICIO = [
 ];
 
 export const DEMO_SERVICIOS: Servicio[] = [
-  { id: "1", nombre: "Corte de Cabello Clásico", categoria: "Corte y estilizado", duracion: 45, precio: 3500, descripcion: "Corte personalizado con lavado y secado incluido.", activo: true },
-  { id: "2", nombre: "Masaje Descontracturante", categoria: "Masaje descontracturante", duracion: 60, precio: 8000, descripcion: "Masaje profundo para aliviar tensiones musculares.", activo: true },
-  { id: "3", nombre: "Limpieza Facial Profunda", categoria: "Limpieza facial", duracion: 90, precio: 11000, descripcion: "Limpieza y exfoliación facial con productos premium.", activo: false },
+  { id: "1", nombre: "Corte de Cabello Clásico", categoria: "BELLEZA", duracion: 45, precio: 35000, descripcion: "Corte personalizado con lavado y secado incluido.", activo: true },
+  { id: "2", nombre: "Masaje Descontracturante", categoria: "SALUD_Y_BIENESTAR", duracion: 60, precio: 80000, descripcion: "Masaje profundo para aliviar tensiones musculares.", activo: true },
+  { id: "3", nombre: "Limpieza Facial Profunda", categoria: "BELLEZA", duracion: 90, precio: 110000, descripcion: "Limpieza y exfoliación facial con productos premium.", activo: false },
 ];
