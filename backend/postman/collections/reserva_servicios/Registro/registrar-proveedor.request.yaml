@@ -1,0 +1,23 @@
+$kind: http-request
+name: Registrar Proveedor
+order: 2000
+method: POST
+url: '{{baseUrl}}/api/v1/registrations/provider'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "firstName": "Jeronimo",
+      "lastName": "Martinez",
+      "email": "centro.vital.demo@example.com",
+      "phone": "+573001112233",
+      "password": "Proveedor123",
+      "termsAccepted": true,
+      "businessName": "Centro Vital",
+      "businessCategory": "Salud y Bienestar",
+      "businessDescription": "Centro integral de servicios de salud, belleza y bienestar personal.",
+      "address": "Cra 43A #1-50, Medellin"
+    }

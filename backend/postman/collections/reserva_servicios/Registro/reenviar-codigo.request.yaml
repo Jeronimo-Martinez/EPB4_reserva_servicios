@@ -1,0 +1,14 @@
+$kind: http-request
+name: Reenviar Codigo
+order: 3000
+method: POST
+url: '{{baseUrl}}/api/v1/registrations/resend-code'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "centro.vital.demo@example.com"
+    }
