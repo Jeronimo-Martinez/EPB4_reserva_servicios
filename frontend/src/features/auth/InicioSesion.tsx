@@ -223,7 +223,7 @@ export default function InicioSesion({ onRegistro }: { onRegistro?: () => void }
           </div>
 
           {/* Accesos rápidos de prueba */}
-          <div className="bg-[#e6f0ef] border border-[#b8d4d1] rounded-[10px] p-4 mb-6">
+          <div className="bg-[#e6f0ef] border border-[#b8d4d1] rounded-[10px] p-4 mb-6 hidden">
             <div className="flex items-center justify-between mb-2">
               <span className="text-[#005146] text-[12px] font-semibold uppercase tracking-wider">
                 Acceso Rápido de Prueba
