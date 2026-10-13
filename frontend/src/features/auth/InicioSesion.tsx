@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { NavBar } from '@/components/layout';
-import { InputField, FieldError } from '@/components/ui';
+import { InputField, FieldError, RecaptchaCheckbox } from '@/components/ui';
+import type { RecaptchaCheckboxHandle } from '@/components/ui';
 import { useAuth } from '@/context/AuthContext';
 import { ApiError } from '@/api/client';
 
@@ -18,6 +19,14 @@ export default function InicioSesion({ onRegistro }: { onRegistro?: () => void }
   const [loading, setLoading] = useState(false);
   const [attempts, setAttempts] = useState(0);
   const [recoveryEmail, setRecoveryEmail] = useState('');
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaError, setCaptchaError] = useState('');
+  const recaptchaRef = useRef<RecaptchaCheckboxHandle>(null);
+
+  const resetCaptcha = () => {
+    setCaptchaToken(null);
+    recaptchaRef.current?.reset();
+  };
 
   const handleRegisterClick = () => {
     if (onRegistro) {
@@ -46,6 +55,11 @@ export default function InicioSesion({ onRegistro }: { onRegistro?: () => void }
       ok = false;
     }
 
+    if (!captchaToken) {
+      setCaptchaError('Completa el captcha para continuar.');
+      ok = false;
+    }
+
     return ok;
   };
 
@@ -57,11 +71,13 @@ export default function InicioSesion({ onRegistro }: { onRegistro?: () => void }
     setGlobalError('');
 
     try {
-      await login({ email: email.trim(), password });
+      await login({ email: email.trim(), password, recaptchaToken: captchaToken ?? '' });
       // Redirección manejada en AuthContext según rol
     } catch (err: unknown) {
       const next = attempts + 1;
       setAttempts(next);
+      // El token v2 es de un solo uso: se resetea en cada fallo.
+      resetCaptcha();
       if (err instanceof ApiError) {
         setGlobalError(err.message);
       } else {
@@ -237,7 +253,7 @@ export default function InicioSesion({ onRegistro }: { onRegistro?: () => void }
                 type="button"
                 onClick={async () => {
                   setLoading(true);
-                  await login({ email: 'cliente.demo@example.com', password: 'Cliente123' });
+                  await login({ email: 'cliente.demo@example.com', password: 'Cliente123', recaptchaToken: captchaToken ?? '' });
                 }}
                 className="flex-1 bg-white hover:bg-[#d5e7e5] border border-[#b8d4d1] rounded-[8px] py-2 px-3 text-left transition-colors cursor-pointer"
               >
@@ -248,7 +264,7 @@ export default function InicioSesion({ onRegistro }: { onRegistro?: () => void }
                 type="button"
                 onClick={async () => {
                   setLoading(true);
-                  await login({ email: 'contacto@centrovital.com', password: 'Proveedor1!' });
+                  await login({ email: 'contacto@centrovital.com', password: 'Proveedor1!', recaptchaToken: captchaToken ?? '' });
                 }}
                 className="flex-1 bg-white hover:bg-[#d5e7e5] border border-[#b8d4d1] rounded-[8px] py-2 px-3 text-left transition-colors cursor-pointer"
               >
@@ -340,9 +356,20 @@ export default function InicioSesion({ onRegistro }: { onRegistro?: () => void }
               {passwordError && <FieldError msg={passwordError} />}
             </div>
 
+            <div className="flex flex-col gap-1">
+              <RecaptchaCheckbox
+                ref={recaptchaRef}
+                onToken={(t) => {
+                  setCaptchaToken(t);
+                  if (t) setCaptchaError('');
+                }}
+              />
+              {captchaError && <FieldError msg={captchaError} />}
+            </div>
+
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !captchaToken}
               className="w-full bg-[#005146] hover:bg-[#00403b] disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold text-[14px] py-[12px] rounded-[8px] transition-colors mt-1 flex items-center justify-center gap-2 cursor-pointer"
             >
               {loading ? (
