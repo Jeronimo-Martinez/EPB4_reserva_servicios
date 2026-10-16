@@ -7,3 +7,5 @@ export { default as PasswordStrength } from "./PasswordStrength";
 export { default as SuccessBanner } from "./SuccessBanner";
 export { default as StepIndicator } from "./StepIndicator";
 export { default as EmptyState } from "./EmptyState";
+export { default as RecaptchaCheckbox } from "./RecaptchaCheckbox";
+export type { RecaptchaCheckboxHandle } from "./RecaptchaCheckbox";

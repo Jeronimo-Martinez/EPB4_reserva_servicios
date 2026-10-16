@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { NavBar } from '@/components/layout';
-import { InputField, PasswordStrength, FieldError } from '@/components/ui';
+import { InputField, PasswordStrength, FieldError, RecaptchaCheckbox } from '@/components/ui';
+import type { RecaptchaCheckboxHandle } from '@/components/ui';
 import { useAuth } from '@/context/AuthContext';
 import { registerClientApi } from '@/api/auth';
 import { ApiError } from '@/api/client';
@@ -41,6 +42,13 @@ export default function RegistroCliente() {
   const [code, setCode] = useState('');
   const [codeError, setCodeError] = useState('');
   const [resentMessage, setResentMessage] = useState('');
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const recaptchaRef = useRef<RecaptchaCheckboxHandle>(null);
+
+  const resetCaptcha = () => {
+    setCaptchaToken(null);
+    recaptchaRef.current?.reset();
+  };
 
   const set = (field: keyof FormData) => (value: string | boolean) => {
     setForm((f) => ({ ...f, [field]: value }));
@@ -72,6 +80,7 @@ export default function RegistroCliente() {
       e.confirmarContrasena = 'Las contraseñas no coinciden.';
     }
     if (!form.terminos) e.terminos = 'Debes aceptar los términos y condiciones.';
+    if (!captchaToken) e.recaptcha = 'Completa el captcha para continuar.';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -91,9 +100,12 @@ export default function RegistroCliente() {
         phone: form.telefono.trim(),
         password: form.contrasena,
         termsAccepted: form.terminos,
+        recaptchaToken: captchaToken ?? '',
       });
       setScreen('verificacion');
     } catch (err: unknown) {
+      // El token v2 es de un solo uso: se resetea en cada fallo.
+      resetCaptcha();
       if (err instanceof ApiError) {
         setGlobalError(err.message);
       } else {
@@ -417,9 +429,20 @@ export default function RegistroCliente() {
               )}
             </div>
 
+            <div className="flex flex-col gap-1 mt-1">
+              <RecaptchaCheckbox
+                ref={recaptchaRef}
+                onToken={(t) => {
+                  setCaptchaToken(t);
+                  setErrors((prev) => ({ ...prev, recaptcha: '' }));
+                }}
+              />
+              {errors.recaptcha && <FieldError msg={errors.recaptcha} />}
+            </div>
+
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !captchaToken}
               className="w-full bg-[#005146] hover:bg-[#00403b] disabled:opacity-60 text-white font-semibold text-[14px] py-[12px] rounded-[8px] transition-colors mt-2 cursor-pointer flex items-center justify-center gap-2"
             >
               {loading ? 'Creando cuenta...' : 'Crear cuenta'}

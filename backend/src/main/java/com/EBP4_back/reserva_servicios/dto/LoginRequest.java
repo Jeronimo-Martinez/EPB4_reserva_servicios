@@ -8,5 +8,7 @@ public record LoginRequest(
         @Email(message = "El correo no tiene un formato valido")
         String email,
         @NotBlank(message = "La contrasena es obligatoria")
-        String password) {
+        String password,
+        @NotBlank(message = "Completa el captcha para continuar")
+        String recaptchaToken) {
 }

@@ -36,20 +36,23 @@ public class RegistrationService {
     private final VerificationCodeRepository codeRepository;
     private final PasswordEncoder passwordEncoder;
     private final VerificationCodeSender codeSender;
+    private final RecaptchaValidator recaptchaValidator;
     private final SecureRandom random = new SecureRandom();
 
     public RegistrationService(UserRepository userRepository, BusinessRepository businessRepository,
             VerificationCodeRepository codeRepository, PasswordEncoder passwordEncoder,
-            VerificationCodeSender codeSender) {
+            VerificationCodeSender codeSender, RecaptchaValidator recaptchaValidator) {
         this.userRepository = userRepository;
         this.businessRepository = businessRepository;
         this.codeRepository = codeRepository;
         this.passwordEncoder = passwordEncoder;
         this.codeSender = codeSender;
+        this.recaptchaValidator = recaptchaValidator;
     }
 
     @Transactional
     public RegistrationResponse register(RegistrationRequest request) {
+        recaptchaValidator.validate(request.recaptchaToken());
         String email = normalizeEmail(request.email());
         validateUniqueEmail(email);
         validatePassword(request.password());
@@ -62,6 +65,7 @@ public class RegistrationService {
 
     @Transactional
     public RegistrationResponse registerProvider(ProviderRegistrationRequest request) {
+        recaptchaValidator.validate(request.recaptchaToken());
         String email = normalizeEmail(request.email());
         validateUniqueEmail(email);
         validatePassword(request.password());
