@@ -17,6 +17,7 @@ export async function loginApi(credentials: LoginCredentials): Promise<LoginResp
     body: JSON.stringify({
       email: credentials.email.trim().toLowerCase(),
       password: credentials.password,
+      recaptchaToken: credentials.recaptchaToken,
     }),
   });
 }
@@ -33,6 +34,7 @@ export async function registerClientApi(
       phone: data.phone.trim(),
       password: data.password,
       termsAccepted: data.termsAccepted,
+      recaptchaToken: data.recaptchaToken,
     }),
   });
 }
@@ -53,6 +55,7 @@ export async function registerProviderApi(
       businessCategory: data.businessCategory,
       businessDescription: data.businessDescription.trim(),
       address: data.address.trim(),
+      recaptchaToken: data.recaptchaToken,
     }),
   });
 }

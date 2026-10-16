@@ -94,7 +94,7 @@ class ProviderRegistrationControllerTest {
     private String providerBody(String email, String password, boolean terms, String businessName, String category) {
         return """
                 {"firstName":"Jero","lastName":"Martinez","email":"%s","phone":"+573001112233",
-                "password":"%s","termsAccepted":%s,
+                "password":"%s","termsAccepted":%s,"recaptchaToken":"test-token",
                 "businessName":"%s","businessCategory":"%s",
                 "businessDescription":"Descripcion valida del negocio para pruebas.",
                 "address":"Cra 43A #1-50, Medellin"}

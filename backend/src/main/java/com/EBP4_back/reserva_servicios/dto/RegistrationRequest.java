@@ -12,5 +12,6 @@ public record RegistrationRequest(
         @NotBlank(message = "El correo es obligatorio") @Email(message = "El correo no tiene un formato valido") String email,
         @NotBlank(message = "El telefono es obligatorio") @Pattern(regexp = "^\\+?[0-9()\\- ]{7,20}$", message = "El telefono no tiene un formato valido") String phone,
         @NotBlank(message = "La contrasena es obligatoria") String password,
-        @NotNull(message = "Debe aceptar los terminos y condiciones") Boolean termsAccepted) {
+        @NotNull(message = "Debe aceptar los terminos y condiciones") Boolean termsAccepted,
+        @NotBlank(message = "Completa el captcha para continuar") String recaptchaToken) {
 }

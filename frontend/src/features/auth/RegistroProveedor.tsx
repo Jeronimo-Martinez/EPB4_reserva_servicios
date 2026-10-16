@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { NavBar } from '@/components/layout';
 import {
   InputField,
@@ -7,7 +7,9 @@ import {
   PasswordStrength,
   FieldError,
   StepIndicator,
+  RecaptchaCheckbox,
 } from '@/components/ui';
+import type { RecaptchaCheckboxHandle } from '@/components/ui';
 import { useAuth } from '@/context/AuthContext';
 import { ApiError } from '@/api/client';
 
@@ -81,6 +83,13 @@ export default function RegistroProveedor() {
   const [verificationCode, setVerificationCode] = useState('');
   const [verificationError, setVerificationError] = useState('');
   const [resentMessage, setResentMessage] = useState('');
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const recaptchaRef = useRef<RecaptchaCheckboxHandle>(null);
+
+  const resetCaptcha = () => {
+    setCaptchaToken(null);
+    recaptchaRef.current?.reset();
+  };
 
   const validatePaso1 = (): boolean => {
     const e: Errors = {};
@@ -112,6 +121,7 @@ export default function RegistroProveedor() {
       e.confirmarContrasena = 'Las contraseñas no coinciden.';
     }
     if (!contacto.terminos) e.terminos = 'Debes aceptar los términos y condiciones comerciales.';
+    if (!captchaToken) e.recaptcha = 'Completa el captcha para continuar.';
     setErrors2(e);
     return Object.keys(e).length === 0;
   };
@@ -134,6 +144,7 @@ export default function RegistroProveedor() {
         phone: contacto.telefono.trim(),
         password: contacto.contrasena,
         termsAccepted: contacto.terminos,
+        recaptchaToken: captchaToken ?? '',
         businessName: negocio.nombreNegocio.trim(),
         businessCategory: negocio.categoria,
         businessDescription: negocio.descripcion.trim(),
@@ -141,6 +152,8 @@ export default function RegistroProveedor() {
       });
       setScreen('verificacion');
     } catch (err: unknown) {
+      // El token v2 es de un solo uso: se resetea en cada fallo.
+      resetCaptcha();
       if (err instanceof ApiError) {
         setErrors2({ submit: err.message });
       } else {
@@ -440,6 +453,21 @@ export default function RegistroProveedor() {
                 {errors2.terminos && <div className="ml-7"><FieldError msg={errors2.terminos} /></div>}
               </div>
 
+              <div className="flex flex-col gap-1 mt-1">
+                <RecaptchaCheckbox
+                  ref={recaptchaRef}
+                  onToken={(t) => {
+                    setCaptchaToken(t);
+                    setErrors2((prev) => {
+                      const next = { ...prev };
+                      delete next.recaptcha;
+                      return next;
+                    });
+                  }}
+                />
+                {errors2.recaptcha && <FieldError msg={errors2.recaptcha} />}
+              </div>
+
               <div className="flex gap-3 pt-2">
                 <button
                   type="button"
@@ -450,7 +478,7 @@ export default function RegistroProveedor() {
                 </button>
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || !captchaToken}
                   className="flex-1 bg-[#005146] hover:bg-[#00403b] disabled:opacity-60 text-white font-semibold text-[14px] py-[12px] rounded-[8px] transition-colors cursor-pointer flex items-center justify-center gap-2"
                 >
                   {loading ? (

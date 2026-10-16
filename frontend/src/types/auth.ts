@@ -15,6 +15,7 @@ export interface User {
 export interface LoginCredentials {
   email: string;
   password: string;
+  recaptchaToken: string;
 }
 
 export interface LoginResponse {
@@ -31,6 +32,7 @@ export interface RegisterClientDTO {
   phone: string;
   password: string;
   termsAccepted: boolean;
+  recaptchaToken: string;
 }
 
 export interface RegisterClientResponse {
@@ -66,6 +68,7 @@ export interface RegisterProviderDTO {
   phone: string;
   password: string;
   termsAccepted: boolean;
+  recaptchaToken: string;
   businessName: string;
   businessCategory: string;
   businessDescription: string;

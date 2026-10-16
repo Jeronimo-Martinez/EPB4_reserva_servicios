@@ -16,14 +16,18 @@ public class LoginService {
     private static final String INVALID_CREDENTIALS = "Correo electronico o contrasena incorrectos";
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final RecaptchaValidator recaptchaValidator;
 
-    public LoginService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public LoginService(UserRepository userRepository, PasswordEncoder passwordEncoder,
+            RecaptchaValidator recaptchaValidator) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.recaptchaValidator = recaptchaValidator;
     }
 
     @Transactional(readOnly = true)
     public LoginResponse login(LoginRequest request) {
+        recaptchaValidator.validate(request.recaptchaToken());
         String email = request.email().trim().toLowerCase(Locale.ROOT);
         User user = userRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> invalidCredentials());
