@@ -1,10 +1,16 @@
 import React from 'react';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { BookingProvider } from '@/context/BookingContext';
 import Landing from '@/pages/Landing';
 import { CatalogoServicios } from '@/features/cliente';
 import { InicioSesion, RegistroCliente, RegistroProveedor } from '@/features/auth';
 import { GestionServicios } from '@/features/servicios';
 import { PerfilUsuario } from '@/features/perfil';
+import { HorarioDisponibilidad } from '@/features/horarios';
+import { AgendaProveedor } from '@/features/agenda';
+import { DetalleNegocio } from '@/features/negocios';
+import { DisponibilidadServicio } from '@/features/disponibilidad';
+import { ReservaCita } from '@/features/reservas';
 
 function MainRouter() {
   const { currentView, notification, clearNotification } = useAuth();
@@ -12,17 +18,26 @@ function MainRouter() {
   const renderCurrentView = () => {
     switch (currentView) {
       case 'catalogo':
-        return <CatalogoServicios initialView="catalogo" />;
       case 'reservas':
-        return <CatalogoServicios initialView="reservas" />;
+        return <CatalogoServicios />;
+      case 'negocio':
+        return <DetalleNegocio />;
+      case 'disponibilidad':
+        return <DisponibilidadServicio />;
+      case 'reserva':
+        return <ReservaCita />;
+      case 'servicios':
+        return <GestionServicios />;
+      case 'horarios':
+        return <HorarioDisponibilidad />;
+      case 'agenda':
+        return <AgendaProveedor />;
       case 'login':
         return <InicioSesion />;
       case 'registro-cliente':
         return <RegistroCliente />;
       case 'registro-proveedor':
         return <RegistroProveedor />;
-      case 'servicios':
-        return <GestionServicios />;
       case 'perfil':
         return <PerfilUsuario />;
       case 'landing':
@@ -81,7 +96,9 @@ function MainRouter() {
 export default function App() {
   return (
     <AuthProvider>
-      <MainRouter />
+      <BookingProvider>
+        <MainRouter />
+      </BookingProvider>
     </AuthProvider>
   );
 }

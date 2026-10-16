@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { NavBar } from '@/components/layout';
 import { EmptyState } from '@/components/ui';
 import { useAuth } from '@/context/AuthContext';
+import { useBooking } from '@/context/BookingContext';
 import { Service, ServiceCategory } from '@/types/service';
 import { fetchCatalogServices } from '@/api/services';
 import { ApiError } from '@/api/client';
@@ -23,6 +24,7 @@ interface CatalogoServiciosProps {
 
 export default function CatalogoServicios({ initialView = 'catalogo' }: CatalogoServiciosProps) {
   const { user, navigate, showNotification } = useAuth();
+  const { setSelectedServiceForBooking } = useBooking();
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<ServiceCategory>('Todas');
@@ -63,7 +65,15 @@ export default function CatalogoServicios({ initialView = 'catalogo' }: Catalogo
   });
 
   const handleOpenBooking = (service: Service) => {
-    setSelectedService(service);
+    setSelectedServiceForBooking({
+      id: service.id,
+      nombre: service.name,
+      duracion: `${service.durationMinutes} min`,
+      duracionMin: service.durationMinutes,
+      precio: service.price,
+      precioStr: `$${service.price.toLocaleString('es-CO')}`,
+    });
+    navigate('disponibilidad');
   };
 
   const handleCloseBooking = () => {

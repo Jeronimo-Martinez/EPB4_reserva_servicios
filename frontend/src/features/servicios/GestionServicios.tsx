@@ -76,7 +76,30 @@ export default function GestionServicios() {
           <path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
         </svg>
       ),
-      onClick: () => setView('lista'),
+      onClick: () => {
+        setView('lista');
+        navigate('servicios');
+      },
+    },
+    {
+      label: 'Agenda',
+      icon: (
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+          <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.8" />
+          <path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      ),
+      onClick: () => navigate('agenda'),
+    },
+    {
+      label: 'Horarios',
+      icon: (
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
+          <path d="M12 7v5l3 2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      ),
+      onClick: () => navigate('horarios'),
     },
     {
       label: 'Perfil de Negocio',

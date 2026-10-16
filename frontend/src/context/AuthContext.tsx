@@ -17,11 +17,16 @@ import { ApiError } from '@/api/client';
 export type AppView =
   | 'landing'
   | 'catalogo'
+  | 'negocio'
+  | 'disponibilidad'
+  | 'reserva'
   | 'reservas'
   | 'login'
   | 'registro-cliente'
   | 'registro-proveedor'
   | 'servicios'
+  | 'horarios'
+  | 'agenda'
   | 'perfil';
 
 interface NotificationState {
