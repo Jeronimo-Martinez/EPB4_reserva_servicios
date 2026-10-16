@@ -10,10 +10,10 @@ body:
   type: json
   content: |-
     {
-      "providerEmail": "centro.vital@example.com",
-      "name": "Manicure Spa Premium",
-      "category": "Belleza",
-      "description": "Manicure premium con hidratacion, exfoliacion y esmaltado semipermanente.",
+      "providerEmail": "veterinaria.demo@example.com",
+      "name": "Control Dental Felino Completo",
+      "category": "Odontologia",
+      "description": "Revision dental, limpieza con ultrasonido y pulido para gatos.",
       "durationMinutes": 75,
       "price": 65000.00,
       "available": true

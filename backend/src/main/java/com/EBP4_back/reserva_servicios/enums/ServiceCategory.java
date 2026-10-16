@@ -1,12 +1,14 @@
 package com.EBP4_back.reserva_servicios.enums;
 
 public enum ServiceCategory {
-    SALUD_Y_BIENESTAR("Salud y Bienestar"),
-    BELLEZA("Belleza"),
-    HOGAR("Hogar"),
-    EDUCACION("Educacion"),
-    TECNOLOGIA("Tecnologia"),
-    GASTRONOMIA("Gastronomia"),
+    CONSULTA_GENERAL("Consulta general"),
+    VACUNACION("Vacunacion"),
+    DESPARASITACION("Desparasitacion"),
+    PELUQUERIA("Peluqueria y estetica"),
+    CIRUGIA("Cirugia"),
+    ODONTOLOGIA("Odontologia"),
+    LABORATORIO("Laboratorio e imagenes"),
+    URGENCIAS("Urgencias"),
     OTROS("Otros");
 
     private final String label;

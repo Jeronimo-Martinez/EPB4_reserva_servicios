@@ -54,7 +54,10 @@ public class User {
     }
 
     public UUID getId() { return id; }
+    public String getFirstName() { return firstName; }
+    public String getLastName() { return lastName; }
     public String getEmail() { return email; }
+    public String getPhone() { return phone; }
     public String getPasswordHash() { return passwordHash; }
     public UserRole getRole() { return role; }
     public boolean isVerified() { return verified; }
