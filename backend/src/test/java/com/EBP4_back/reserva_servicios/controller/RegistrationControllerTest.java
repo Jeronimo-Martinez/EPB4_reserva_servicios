@@ -29,7 +29,7 @@ class RegistrationControllerTest {
         mockMvc.perform(post("/api/v1/registrations")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"firstName":"Ana","lastName":"Gomez","email":"%s","phone":"+573001234567","password":"Cliente123","termsAccepted":true}
+                                {"firstName":"Ana","lastName":"Gomez","email":"%s","phone":"+573001234567","password":"Cliente123","termsAccepted":true,"recaptchaToken":"test-token"}
                                 """.formatted(email)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.verificationRequired").value(true));
@@ -45,7 +45,7 @@ class RegistrationControllerTest {
 
     @Test
     void rejectsWeakPasswordAndUnacceptedTerms() throws Exception {
-        String base = "{" + "\"firstName\":\"Ana\",\"lastName\":\"Gomez\",\"email\":\"%s\",\"phone\":\"+573001234567\",\"password\":\"%s\",\"termsAccepted\":%s}";
+        String base = "{" + "\"firstName\":\"Ana\",\"lastName\":\"Gomez\",\"email\":\"%s\",\"phone\":\"+573001234567\",\"password\":\"%s\",\"termsAccepted\":%s,\"recaptchaToken\":\"test-token\"}";
         mockMvc.perform(post("/api/v1/registrations").contentType(MediaType.APPLICATION_JSON)
                         .content(base.formatted("weak." + System.nanoTime() + "@example.com", "weak", "true")))
                 .andExpect(status().isBadRequest());

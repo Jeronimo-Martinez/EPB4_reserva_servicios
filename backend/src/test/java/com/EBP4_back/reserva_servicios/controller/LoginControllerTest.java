@@ -24,7 +24,7 @@ class LoginControllerTest {
         mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"email":"cliente.demo@example.com","password":"Cliente123"}
+                                {"email":"cliente.demo@example.com","password":"Cliente123","recaptchaToken":"test-token"}
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("Inicio de sesion exitoso"))
@@ -51,7 +51,7 @@ class LoginControllerTest {
     void rejectsEmptyEmail() throws Exception {
         mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"\",\"password\":\"Cliente123\"}"))
+                        .content("{\"email\":\"\",\"password\":\"Cliente123\",\"recaptchaToken\":\"test-token\"}"))
                 .andExpect(status().isBadRequest());
     }
 
@@ -59,7 +59,15 @@ class LoginControllerTest {
     void rejectsEmptyPassword() throws Exception {
         mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"cliente.demo@example.com\",\"password\":\"\"}"))
+                        .content("{\"email\":\"cliente.demo@example.com\",\"password\":\"\",\"recaptchaToken\":\"test-token\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void rejectsMissingCaptcha() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"cliente.demo@example.com\",\"password\":\"Cliente123\"}"))
                 .andExpect(status().isBadRequest());
     }
 
@@ -67,6 +75,6 @@ class LoginControllerTest {
             throws Exception {
         return mockMvc.perform(post("/api/v1/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"email\":\"" + email + "\",\"password\":\"" + password + "\"}"));
+                .content("{\"email\":\"" + email + "\",\"password\":\"" + password + "\",\"recaptchaToken\":\"test-token\"}"));
     }
 }
