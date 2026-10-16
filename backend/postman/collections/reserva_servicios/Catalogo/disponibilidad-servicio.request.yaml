@@ -1,0 +1,5 @@
+$kind: http-request
+name: Disponibilidad Servicio
+order: 8000
+method: GET
+url: '{{baseUrl}}/api/v1/catalog/{{serviceId}}/availability?from=2026-12-01&to=2026-12-07'

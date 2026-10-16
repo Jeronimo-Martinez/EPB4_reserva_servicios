@@ -10,5 +10,5 @@ body:
   type: json
   content: |-
     {
-      "email": "centro.vital.demo@example.com"
+      "email": "huellitas.registro@example.com"
     }
