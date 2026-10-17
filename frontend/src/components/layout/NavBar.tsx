@@ -26,13 +26,13 @@ export default function NavBar({ links: customLinks, trailing, avatarInitial: cu
     defaultLinks.push(
       {
         label: 'Explorar Servicios',
-        active: currentView === 'catalogo',
+        active: currentView === 'catalogo' || currentView === 'reservas',
         onClick: () => navigate('catalogo'),
       },
       {
-        label: 'Descubrir Negocios',
-        active: currentView === 'negocio',
-        onClick: () => navigate('negocio'),
+        label: 'Negocios',
+        active: currentView === 'negocios' || currentView === 'negocio',
+        onClick: () => navigate('negocios'),
       },
       {
         label: '¿Cómo funciona?',
@@ -53,9 +53,9 @@ export default function NavBar({ links: customLinks, trailing, avatarInitial: cu
         onClick: () => navigate('catalogo'),
       },
       {
-        label: 'Descubrir Negocios',
-        active: currentView === 'negocio',
-        onClick: () => navigate('negocio'),
+        label: 'Negocios',
+        active: currentView === 'negocios' || currentView === 'negocio',
+        onClick: () => navigate('negocios'),
       },
       {
         label: 'Mis Reservas',
@@ -76,9 +76,22 @@ export default function NavBar({ links: customLinks, trailing, avatarInitial: cu
         onClick: () => navigate('agenda'),
       },
       {
-        label: 'Horarios',
-        active: currentView === 'horarios',
-        onClick: () => navigate('horarios'),
+        label: 'Reservas Recibidas',
+        onClick: () => {
+          showNotification(
+            'info',
+            'Reservas Recibidas: Módulo actualmente en desarrollo.'
+          );
+        },
+      },
+      {
+        label: 'Reportes',
+        onClick: () => {
+          showNotification(
+            'info',
+            'Reportes de Ocupación: Módulo actualmente en desarrollo.'
+          );
+        },
       }
     );
   }

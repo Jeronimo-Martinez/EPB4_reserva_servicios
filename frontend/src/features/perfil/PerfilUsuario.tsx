@@ -87,56 +87,7 @@ export default function PerfilUsuario() {
   const providerNavItems = useProviderNavItems({ 'Perfil de Negocio': () => setMode('ver') });
 
   const sideNavItems = isProvider
-    ? [
-        {
-          label: 'Mis Servicios',
-          icon: (
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8" />
-              <path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-            </svg>
-          ),
-          onClick: () => navigate('servicios'),
-        },
-        {
-          label: 'Agenda',
-          icon: (
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
-              <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.8" />
-              <path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-            </svg>
-          ),
-          onClick: () => navigate('agenda'),
-        },
-        {
-          label: 'Horarios',
-          icon: (
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
-              <path d="M12 7v5l3 2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-            </svg>
-          ),
-          onClick: () => navigate('horarios'),
-        },
-        {
-          label: 'Perfil de Negocio',
-          icon: (
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
-              <path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2zM16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2" stroke="currentColor" strokeWidth="1.8" />
-            </svg>
-          ),
-          onClick: () => setMode('ver'),
-        },
-        {
-          label: 'Cerrar Sesión',
-          icon: (
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
-              <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          ),
-          onClick: () => logout(),
-        },
-      ]
+    ? providerNavItems
     : [
         {
           label: 'Mi Perfil',
