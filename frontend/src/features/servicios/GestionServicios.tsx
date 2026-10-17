@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { NavBar, SideNav } from '@/components/layout';
+import { NavBar, ProviderAside } from '@/components/layout';
 import { SuccessBanner, EmptyState } from '@/components/ui';
 import ServicioCard from './components/ServicioCard';
 import FormServicio from './components/FormServicio';
-import { Servicio, FormServicio as FormServicioType, DEMO_SERVICIOS, CATEGORIAS_SERVICIO_LABELS } from './types';
+import { Servicio, FormServicio as FormServicioType, DEMO_SERVICIOS } from './types';
 import { useAuth } from '@/context/AuthContext';
 import {
   fetchProviderServices,
@@ -29,7 +29,7 @@ function mapBackendToServicio(res: ServiceOfferingResponse): Servicio {
 }
 
 export default function GestionServicios() {
-  const { user, navigate, showNotification, logout } = useAuth();
+  const { user, showNotification } = useAuth();
   const [view, setView] = useState<View>('lista');
   const [servicios, setServicios] = useState<Servicio[]>(DEMO_SERVICIOS);
   const [editando, setEditando] = useState<Servicio | null>(null);
@@ -195,23 +195,7 @@ export default function GestionServicios() {
       <NavBar />
 
       <main className="flex-1 w-full max-w-[1280px] mx-auto px-6 lg:px-10 py-8 flex flex-col md:flex-row gap-8">
-        <aside className="w-full md:w-[240px] shrink-0">
-          <div className="bg-[#fcfcf8] border border-[#d4d9d3] rounded-[12px] p-5 mb-5 shadow-xs">
-            <p className="text-[#005146] text-[11px] font-semibold tracking-[0.88px] uppercase mb-1">
-              Panel Profesional
-            </p>
-            <p className="text-[#18211e] text-[17px] font-bold leading-snug">
-              {businessName}
-            </p>
-            {businessCategory && (
-              <span className="inline-block mt-1 text-[12px] text-[#005146] bg-[#e6f0ef] px-2 py-0.5 rounded-full font-medium">
-                {CATEGORIAS_SERVICIO_LABELS[businessCategory] || businessCategory}
-              </span>
-            )}
-          </div>
-
-          <SideNav items={sideNavItems} active="Mis Servicios" />
-        </aside>
+        <ProviderAside active="Mis Servicios" overrides={{ 'Mis Servicios': () => setView('lista') }} />
 
         <div className="flex-1 min-w-0 flex flex-col gap-5">
           {showBanner && view === 'lista' && (

@@ -49,7 +49,7 @@ export default function NavBar({ links: customLinks, trailing, avatarInitial: cu
     defaultLinks.push(
       {
         label: 'Explorar Servicios',
-        active: currentView === 'catalogo',
+        active: currentView === 'catalogo' || currentView === 'reservar',
         onClick: () => navigate('catalogo'),
       },
       {
@@ -71,8 +71,8 @@ export default function NavBar({ links: customLinks, trailing, avatarInitial: cu
         onClick: () => navigate('servicios'),
       },
       {
-        label: 'Agenda',
-        active: currentView === 'agenda',
+        label: 'Agenda y Disponibilidad',
+        active: currentView === 'agenda' || currentView === 'horarios',
         onClick: () => navigate('agenda'),
       },
       {

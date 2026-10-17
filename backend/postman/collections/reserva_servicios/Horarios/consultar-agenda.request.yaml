@@ -1,0 +1,5 @@
+$kind: http-request
+name: Consultar Agenda
+order: 3000
+method: GET
+url: '{{baseUrl}}/api/v1/schedule/agenda?providerEmail=centro.vital@example.com&view=SEMANA&date=2026-12-01'

@@ -50,16 +50,20 @@ public class ReservationService {
         if (!request.startAt().isAfter(now)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La fecha y la hora deben ser futuras");
         }
+        Reservation hold = new Reservation(client, service, request.startAt(), now.plus(HOLD_MINUTES, ChronoUnit.MINUTES));
+        if (!service.getBusiness().isOpenDuring(hold.getStartAt(), hold.getEndAt())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "El horario seleccionado esta fuera del horario de atencion del proveedor");
+        }
         // Changing the selection replaces the previous hold of this client instead of blocking two slots.
         reservationRepository.deleteAllByClientEmailIgnoreCaseAndStatus(client.getEmail(), ReservationStatus.PENDIENTE);
-        Reservation hold = new Reservation(client, service, request.startAt(), now.plus(HOLD_MINUTES, ChronoUnit.MINUTES));
         // shortcut: check-then-insert can let two simultaneous holds take the same slot; add a DB lock if concurrency grows.
-        if (reservationRepository.countBlocking(service.getBusiness().getId(), hold.getStartAt(), hold.getEndAt(),
-                now, ReservationStatus.CONFIRMADA) > 0) {
+        if (!reservationRepository.findBlocking(service.getBusiness().getId(), hold.getStartAt(), hold.getEndAt(),
+                now, ReservationStatus.CONFIRMADA).isEmpty()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "El horario seleccionado ya no esta disponible");
         }
         return toResponse(reservationRepository.save(hold),
-                "Horario reservado temporalmente por " + HOLD_MINUTES + " minutos");
+                "Horario reservado temporalmente por " + HOLD_MINUTES + " minutos, completa tu reserva");
     }
 
     @Transactional(readOnly = true)

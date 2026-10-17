@@ -207,37 +207,124 @@ Response `201 Created`:
 
 ---
 
-### 3. Agendamiento de Citas (Reservas)
+### 2.1 Negocios (HU-13)
 
-#### `POST /api/v1/bookings`
-Permite a un cliente agendar una cita para un servicio específico.
+Pantallas `src/features/negocios/ResultadosNegocios.tsx` (enlace **Negocios** en la barra superior) y `DetalleNegocio.tsx` (al elegir un negocio en los resultados o su nombre en una tarjeta del catálogo, con `openBusiness` de `AuthContext`). En el detalle, **Reservar** abre el modal `IniciarReservaModal` (también lo usa "Reservar cita" del catálogo) y **Elegir fecha y hora** continúa a la reserva. Los servicios pausados muestran "No disponible por el momento" con el botón deshabilitado.
+
+#### `GET /api/v1/catalog/businesses?search=...`
+Negocios cuyo nombre, categoría, descripción, dirección o alguno de sus servicios contiene el término (sin distinguir mayúsculas). Sin `search` devuelve todos. Cada elemento tiene el mismo formato del detalle.
+
+#### `GET /api/v1/catalog/businesses/{id}`
+```json
+{
+  "id": "…", "name": "Centro Vital", "category": "Salud y Bienestar",
+  "description": "Centro integral de servicios de salud, belleza y bienestar personal.",
+  "address": "Cra 43A #1-50, Medellin", "phone": "+573001112233", "email": "centro.vital@example.com",
+  "averageRating": 0, "reviewCount": 0,
+  "services": [{ "id": "…", "name": "Corte de Cabello Clasico", "durationMinutes": 45, "price": 35000, "available": true, "…": "…" }]
+}
+```
+`available` es `true` solo si el servicio está activo **y** el negocio tiene horario de atención. Mientras no existan reseñas, la calificación se muestra como "Sin reseñas aún".
+
+---
+
+### 3. Reserva de Citas (HU-14, HU-15 y HU-16)
+
+Pantalla `src/features/reservas/ReservarCita.tsx`. Se abre con **Reservar cita** en el catálogo (`startBooking` en `AuthContext`); sin sesión, lleva al inicio de sesión. Tiene tres pasos: selección de servicio, fecha y hora → revisión con el tiempo restante del bloqueo → reserva confirmada. Las llamadas están en `src/api/services.ts` (negocio y disponibilidad) y `src/api/reservations.ts` (bloqueo y confirmación).
+
+#### `GET /api/v1/catalog/businesses/{businessId}`
+Datos del negocio y sus servicios; alimenta el selector **Servicio** (solo servicios disponibles).
+
+#### `GET /api/v1/catalog/{serviceId}/availability?from=YYYY-MM-DD&to=YYYY-MM-DD`
+Cupos libres (máximo 31 días por consulta; la pantalla pide 4 semanas desde hoy). Solo incluye días con cupos; cada cupo es el instante UTC de inicio y ya excluye reservas, bloqueos temporales y horarios fuera de atención. Si no hay cupos, `message` = "El servicio no tiene disponibilidad proxima".
+
+```json
+{ "serviceId": "…", "durationMinutes": 30, "timeZone": "America/Bogota", "message": null,
+  "days": [{ "date": "2026-10-19", "slots": ["2026-10-19T13:00:00Z", "2026-10-19T13:30:00Z"] }] }
+```
+
+#### `POST /api/v1/reservations/holds`
+Bloquea el horario por 10 minutos (botón **Continuar**). Responde `201` con la reserva `PENDIENTE` y `holdExpiresAt`; `409` si otro cliente ya tomó el horario (la pantalla muestra el aviso y recarga los cupos).
+
+```json
+{ "clientEmail": "cliente.demo@example.com", "serviceId": "…", "startAt": "2026-10-19T13:00:00Z" }
+```
+
+#### `POST /api/v1/reservations/{id}/confirm`
+Confirma la reserva (botón **Confirmar reserva**) con `{ "clientEmail": "…" }`. Responde `200` con `status: "CONFIRMADA"`; `410` si el bloqueo expiró (la pantalla vuelve a la selección de fecha y hora con un aviso) y `409` si ya estaba confirmada.
+
+---
+
+### 4. Horario de Atención del Proveedor (HU-09)
+
+Pantalla `src/features/horarios/HorarioAtencion.tsx`, accesible desde **Agenda y Disponibilidad** en la barra superior o **Horarios** en el panel lateral del proveedor. Las llamadas están en `src/api/schedule.ts`.
+
+#### `GET /api/v1/schedule/hours?providerEmail=...`
+Devuelve los días configurados. Si la lista está vacía, la pantalla muestra lunes a sábado activos sin horas, como en el mockup. Responde `404` si el proveedor no tiene negocio.
+
+Response `200 OK`:
+```json
+{
+  "message": null,
+  "timeZone": "America/Bogota",
+  "days": [{ "dayOfWeek": "MONDAY", "startTime": "08:00:00", "endTime": "18:00:00" }]
+}
+```
+
+#### `PUT /api/v1/schedule/hours`
+Reemplaza el horario completo: los días que no se envían quedan sin atención.
 
 Request:
 ```json
 {
-  "serviceId": "srv-01",
-  "clientName": "Ana Gómez",
-  "clientEmail": "ana.gomez@example.com",
-  "clientPhone": "+573001234567",
-  "date": "2026-09-20",
-  "timeSlot": "10:00 AM",
-  "notes": "Primera vez en el estudio"
+  "providerEmail": "centro.vital@example.com",
+  "days": [{ "dayOfWeek": "MONDAY", "startTime": "09:00", "endTime": "17:00" }]
 }
 ```
 
-Response `201 Created`:
+Responde `200` con el mismo formato del `GET` y `"message": "Horario guardado exitosamente"`, o `400` si no hay días, falta una hora, la hora de inicio no es anterior a la de cierre o un día se repite. La pantalla valida las mismas reglas antes de enviar para marcar el día con error.
+
+---
+
+### 5. Agenda del Proveedor (HU-11)
+
+Pantalla `src/features/agenda/AgendaNegocio.tsx`, accesible desde **Agenda y Disponibilidad** en la barra superior o **Agenda** en el panel lateral (`ProviderAside`, compartido por todas las páginas del proveedor). Abre en la vista **Día**; la semana oculta los días sin atención que no tienen reservas y el mes muestra las reservas de cada día. Al seleccionar una reserva se abre el panel de detalle (se cierra con la X, `Esc` o clic fuera).
+
+#### `GET /api/v1/schedule/agenda?providerEmail=...&view=DIA|SEMANA|MES&date=YYYY-MM-DD`
+`date` es cualquier día del periodo: la semana empieza el lunes y el mes el día 1. Las horas llegan en UTC y la pantalla las muestra en hora de Bogotá.
+
+Response `200 OK`:
 ```json
 {
-  "id": "res-9876",
-  "serviceId": "srv-01",
-  "serviceName": "Corte de Cabello y Estilo",
-  "clientName": "Ana Gómez",
-  "date": "2026-09-20",
-  "timeSlot": "10:00 AM",
-  "status": "Confirmada",
-  "createdAt": "2026-09-15T21:10:00Z"
+  "view": "SEMANA",
+  "from": "2026-10-19",
+  "to": "2026-10-25",
+  "timeZone": "America/Bogota",
+  "message": null,
+  "days": [
+    {
+      "date": "2026-10-19",
+      "openTime": "08:00:00",
+      "closeTime": "18:00:00",
+      "reservations": [
+        {
+          "id": "be496ab9-...",
+          "clientName": "Cliente Demo",
+          "clientEmail": "cliente.demo@example.com",
+          "clientPhone": "+573001234567",
+          "serviceName": "Masaje Descontracturante",
+          "startAt": "2026-10-19T14:00:00Z",
+          "endAt": "2026-10-19T15:00:00Z",
+          "durationMinutes": 60,
+          "status": "CONFIRMADA"
+        }
+      ]
+    }
+  ]
 }
 ```
+
+`openTime`/`closeTime` son `null` si el negocio no atiende ese día. `status: "PENDIENTE"` es un bloqueo temporal mientras otro cliente completa su reserva y se muestra como **Bloqueado**. Si no hay reservas, `message` trae "No tienes reservas programadas en este periodo".
 
 ---
 

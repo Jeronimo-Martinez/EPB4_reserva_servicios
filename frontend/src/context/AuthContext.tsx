@@ -13,6 +13,7 @@ import {
   resendCodeApi,
 } from '@/api/auth';
 import { ApiError } from '@/api/client';
+import { Service } from '@/types/service';
 
 export type AppView =
   | 'landing'
@@ -27,6 +28,9 @@ export type AppView =
   | 'servicios'
   | 'horarios'
   | 'agenda'
+  | 'reservar'
+  | 'negocios'
+  | 'negocio'
   | 'perfil';
 
 interface NotificationState {
@@ -49,6 +53,13 @@ interface AuthContextType {
   resendCode: (email: string) => Promise<void>;
   registerProvider: (data: RegisterProviderDTO) => Promise<void>;
   updateUserProfile: (data: Partial<User>) => void;
+  /** Servicio con el que el cliente abrió el flujo de reserva. */
+  bookingService: Service | null;
+  startBooking: (service: Service) => void;
+  /** Negocio abierto en el detalle y vista a la que regresa "Volver". */
+  selectedBusinessId: string | null;
+  businessReturnView: AppView;
+  openBusiness: (businessId: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -67,6 +78,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const [currentView, setCurrentView] = useState<AppView>('landing');
   const [notification, setNotification] = useState<NotificationState | null>(null);
+  const [bookingService, setBookingService] = useState<Service | null>(null);
+  const [selectedBusinessId, setSelectedBusinessId] = useState<string | null>(null);
+  const [businessReturnView, setBusinessReturnView] = useState<AppView>('negocios');
 
   useEffect(() => {
     if (user) {
@@ -88,6 +102,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const navigate = (view: AppView) => {
     setCurrentView(view);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const startBooking = (service: Service) => {
+    if (!user) {
+      showNotification('info', 'Inicia sesión para reservar una cita.');
+      navigate('login');
+      return;
+    }
+    setBookingService(service);
+    navigate('reservar');
+  };
+
+  const openBusiness = (businessId: string) => {
+    setSelectedBusinessId(businessId);
+    // Coming back from the booking flow keeps the original origin (results or catalog).
+    if (currentView !== 'reservar') setBusinessReturnView(currentView);
+    navigate('negocio');
   };
 
   const login = async (credentials: LoginCredentials) => {
@@ -163,6 +194,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         resendCode,
         registerProvider,
         updateUserProfile,
+        bookingService,
+        startBooking,
+        selectedBusinessId,
+        businessReturnView,
+        openBusiness,
       }}
     >
       {children}

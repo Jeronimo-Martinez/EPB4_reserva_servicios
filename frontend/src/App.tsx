@@ -5,6 +5,10 @@ import Landing from '@/pages/Landing';
 import { CatalogoServicios } from '@/features/cliente';
 import { InicioSesion, RegistroCliente, RegistroProveedor } from '@/features/auth';
 import { GestionServicios } from '@/features/servicios';
+import { HorarioAtencion } from '@/features/horarios';
+import { AgendaNegocio } from '@/features/agenda';
+import { ReservarCita } from '@/features/reservas';
+import { DetalleNegocio, ResultadosNegocios } from '@/features/negocios';
 import { PerfilUsuario } from '@/features/perfil';
 import { HorarioDisponibilidad } from '@/features/horarios';
 import { AgendaProveedor } from '@/features/agenda';
@@ -38,6 +42,18 @@ function MainRouter() {
         return <RegistroCliente />;
       case 'registro-proveedor':
         return <RegistroProveedor />;
+      case 'servicios':
+        return <GestionServicios />;
+      case 'horarios':
+        return <HorarioAtencion />;
+      case 'agenda':
+        return <AgendaNegocio />;
+      case 'reservar':
+        return <ReservarCita />;
+      case 'negocios':
+        return <ResultadosNegocios />;
+      case 'negocio':
+        return <DetalleNegocio />;
       case 'perfil':
         return <PerfilUsuario />;
       case 'landing':

@@ -1,0 +1,5 @@
+$kind: http-request
+name: Consultar Horario
+order: 1000
+method: GET
+url: '{{baseUrl}}/api/v1/schedule/hours?providerEmail=centro.vital@example.com'

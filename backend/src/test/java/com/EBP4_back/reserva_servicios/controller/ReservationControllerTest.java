@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.EBP4_back.reserva_servicios.entity.Business;
 import com.EBP4_back.reserva_servicios.entity.ServiceOffering;
 import com.EBP4_back.reserva_servicios.entity.User;
 import com.EBP4_back.reserva_servicios.enums.UserRole;
@@ -12,8 +13,10 @@ import com.EBP4_back.reserva_servicios.repository.ServiceOfferingRepository;
 import com.EBP4_back.reserva_servicios.repository.UserRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import java.time.DayOfWeek;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
+import java.time.LocalDate;
+import java.time.temporal.TemporalAdjusters;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -48,7 +51,7 @@ class ReservationControllerTest {
 
     @Test
     void holdShowsSummaryAndConfirmCreatesReservation() throws Exception {
-        String id = holdId(CLIENT, serviceId("Masaje Descontracturante"), slot(30));
+        String id = holdId(CLIENT, serviceId("Masaje Descontracturante"), slot(9));
 
         mockMvc.perform(get("/api/v1/reservations/" + id).param("clientEmail", CLIENT))
                 .andExpect(status().isOk())
@@ -70,7 +73,7 @@ class ReservationControllerTest {
 
     @Test
     void heldSlotBlocksOthersAndChangingSelectionReplacesHold() throws Exception {
-        Instant slot = slot(31);
+        Instant slot = slot(11);
         String first = holdId(CLIENT, serviceId("Masaje Descontracturante"), slot);
 
         hold(otherClient(), serviceId("Masaje Descontracturante"), slot).andExpect(status().isConflict());
@@ -83,7 +86,7 @@ class ReservationControllerTest {
 
     @Test
     void expiredHoldIsRejectedAndFreesTheSlot() throws Exception {
-        Instant slot = slot(32);
+        Instant slot = slot(13);
         String id = holdId(CLIENT, serviceId("Masaje Descontracturante"), slot);
         new TransactionTemplate(transactionManager).executeWithoutResult(tx -> entityManager
                 .createQuery("UPDATE Reservation r SET r.holdExpiresAt = :past WHERE r.id = :id")
@@ -100,9 +103,11 @@ class ReservationControllerTest {
         mockMvc.perform(post("/api/v1/reservations/holds").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"clientEmail\":\"" + CLIENT + "\",\"serviceId\":\"" + serviceId("Masaje Descontracturante") + "\"}"))
                 .andExpect(status().isBadRequest());
-        hold(CLIENT, serviceId("Limpieza Facial Profunda"), slot(33)).andExpect(status().isConflict());
+        hold(CLIENT, serviceId("Limpieza Facial Profunda"), slot(15)).andExpect(status().isConflict());
+        // 17:30 + 60 min ends after the 18:00 closing time.
+        hold(CLIENT, serviceId("Masaje Descontracturante"), slot(17).plusSeconds(1800)).andExpect(status().isBadRequest());
 
-        String id = holdId(CLIENT, serviceId("Masaje Descontracturante"), slot(33));
+        String id = holdId(CLIENT, serviceId("Masaje Descontracturante"), slot(15));
         confirm(id, otherClient()).andExpect(status().isForbidden());
     }
 
@@ -139,7 +144,9 @@ class ReservationControllerTest {
         return users.save(user).getEmail();
     }
 
-    private Instant slot(int daysAhead) {
-        return Instant.now().plus(daysAhead, ChronoUnit.DAYS).truncatedTo(ChronoUnit.HOURS);
+    // Centro Vital (demo data) attends Monday to Saturday 08:00-18:00 Bogota time.
+    private Instant slot(int hour) {
+        return LocalDate.now(Business.ZONE).with(TemporalAdjusters.next(DayOfWeek.MONDAY)).plusWeeks(4)
+                .atTime(hour, 0).atZone(Business.ZONE).toInstant();
     }
 }

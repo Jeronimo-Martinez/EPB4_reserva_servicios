@@ -1,6 +1,7 @@
 package com.EBP4_back.reserva_servicios.config;
 
 import com.EBP4_back.reserva_servicios.entity.Business;
+import com.EBP4_back.reserva_servicios.entity.BusinessHours;
 import com.EBP4_back.reserva_servicios.entity.ServiceOffering;
 import com.EBP4_back.reserva_servicios.entity.User;
 import com.EBP4_back.reserva_servicios.enums.UserRole;
@@ -8,6 +9,9 @@ import com.EBP4_back.reserva_servicios.repository.BusinessRepository;
 import com.EBP4_back.reserva_servicios.repository.ServiceOfferingRepository;
 import com.EBP4_back.reserva_servicios.repository.UserRepository;
 import java.math.BigDecimal;
+import java.time.DayOfWeek;
+import java.time.LocalTime;
+import java.util.stream.Stream;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -43,9 +47,13 @@ public class SampleDataConfig {
                 encoder.encode("Proveedor123"), UserRole.PROVEEDOR, true);
         provider.verify();
         User savedProvider = users.save(provider);
-        Business business = businesses.save(new Business(savedProvider, "Centro Vital", "Salud y Bienestar",
+        Business centroVital = new Business(savedProvider, "Centro Vital", "Salud y Bienestar",
                 "Centro integral de servicios de salud, belleza y bienestar personal.",
-                "Cra 43A #1-50, Medellin"));
+                "Cra 43A #1-50, Medellin");
+        centroVital.replaceHours(Stream.of(DayOfWeek.values()).filter(day -> day != DayOfWeek.SUNDAY)
+                .map(day -> new BusinessHours(day, LocalTime.of(8, 0), LocalTime.of(18, 0)))
+                .toList());
+        Business business = businesses.save(centroVital);
         services.save(new ServiceOffering(business, "Corte de Cabello Clasico", "Belleza",
                 "Corte personalizado con lavado y secado incluido.", 45, new BigDecimal("35000.00"), true));
         services.save(new ServiceOffering(business, "Masaje Descontracturante", "Salud y Bienestar",

@@ -1,1 +1,1 @@
-export { default as AgendaProveedor } from './AgendaProveedor';
+export { default as AgendaNegocio } from "./AgendaNegocio";

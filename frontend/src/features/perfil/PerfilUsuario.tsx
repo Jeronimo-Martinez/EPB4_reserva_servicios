@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { NavBar, SideNav } from '@/components/layout';
+import { NavBar, SideNav, useProviderNavItems } from '@/components/layout';
 import { InputField, Toggle, SuccessBanner, FieldError } from '@/components/ui';
 import { useAuth } from '@/context/AuthContext';
 
@@ -64,7 +64,7 @@ function SectionCard({ title, children }: { title: string; children: React.React
 }
 
 export default function PerfilUsuario() {
-  const { user, updateUserProfile, navigate, logout } = useAuth();
+  const { user, updateUserProfile, logout } = useAuth();
   const [mode, setMode] = useState<Mode>('ver');
   const [showSuccess, setShowSuccess] = useState(false);
 
@@ -83,6 +83,8 @@ export default function PerfilUsuario() {
   const [errors, setErrors] = useState<Errors>({});
 
   const isProvider = user?.role === 'PROVEEDOR';
+
+  const providerNavItems = useProviderNavItems({ 'Perfil de Negocio': () => setMode('ver') });
 
   const sideNavItems = isProvider
     ? [
