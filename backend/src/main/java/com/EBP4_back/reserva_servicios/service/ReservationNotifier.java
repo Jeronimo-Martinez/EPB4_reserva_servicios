@@ -4,18 +4,22 @@ import com.EBP4_back.reserva_servicios.entity.Reservation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.MailException;
+import org.springframework.mail.MailSender;
 import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Component;
 
 @Component
 public class ReservationNotifier {
     private static final Logger log = LoggerFactory.getLogger(ReservationNotifier.class);
-    private final ObjectProvider<JavaMailSender> mailSender;
+    private final ObjectProvider<MailSender> mailSender;
+    private final boolean mailEnabled;
 
-    public ReservationNotifier(ObjectProvider<JavaMailSender> mailSender) {
+    public ReservationNotifier(ObjectProvider<MailSender> mailSender,
+            @Value("${app.mail.enabled:false}") boolean mailEnabled) {
         this.mailSender = mailSender;
+        this.mailEnabled = mailEnabled;
     }
 
     public void notifyProvider(Reservation reservation) {
@@ -23,8 +27,8 @@ public class ReservationNotifier {
         String text = "Nueva reserva confirmada: %s para %s el %s (id %s)".formatted(
                 reservation.getClient().getEmail(), reservation.getService().getName(),
                 reservation.getStartAt(), reservation.getId());
-        JavaMailSender sender = mailSender.getIfAvailable();
-        if (sender == null) {
+        MailSender sender = mailSender.getIfAvailable();
+        if (!mailEnabled || sender == null) {
             log.info("Notificacion de reserva para {}: {}", providerEmail, text);
             return;
         }

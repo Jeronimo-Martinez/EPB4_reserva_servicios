@@ -53,6 +53,12 @@ Si al arrancar aparece `Read timed out` o `Connection reset`, la red bloquea el 
    | `DB_PASSWORD` | La misma de tu `backend/.env` |
    | `APP_CORS_ALLOWED_ORIGINS` | URL del frontend, separadas por comas. Ej: `https://promarket.vercel.app,http://localhost:5173`. Acepta comodines como `https://promarket-*.vercel.app` para las vistas previas de Vercel |
    | `SPRING_JPA_SHOW_SQL` | `false` |
+   | `RECAPTCHA_SECRET_KEY` | Clave secreta de reCAPTCHA (del mismo par que `VITE_RECAPTCHA_SITE_KEY` en Vercel) |
+   | `APP_MAIL_ENABLED` | `true` para enviar correos; con `false` los códigos solo aparecen en los logs |
+   | `BREVO_API_KEY` | API key de Brevo (ver abajo). Render gratuito bloquea SMTP, así que allí el correo sale por esta API |
+   | `MAIL_FROM` | Correo remitente verificado en Brevo |
+
+   **Correo con Brevo (gratis, unos 300 correos al día):** crea una cuenta en [brevo.com](https://www.brevo.com), verifica tu correo como remitente en **Senders, Domains & Dedicated IPs → Senders**, y crea la clave en **SMTP & API → API Keys** (es la que empieza por `xkeysib-`, no la de SMTP). Sin dominio propio Brevo puede mostrar otra dirección como remitente y algunos correos pueden llegar a spam. En local puedes seguir usando Gmail por SMTP (ver `backend/.env.example`).
 
 4. Pulsa **Deploy** y comprueba `https://<tu-servicio>.onrender.com/api/v1/catalog`.
 

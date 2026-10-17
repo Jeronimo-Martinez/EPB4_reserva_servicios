@@ -7,8 +7,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.MailSender;
 import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
@@ -17,7 +17,7 @@ import org.springframework.stereotype.Component;
  * multiples contrasenas incorrectas (historia de abuso).
  * Fire-and-forget: asincrono y defensivo, un fallo de SMTP nunca
  * rompe ni ralentiza el flujo de login. Tolera que no exista
- * JavaMailSender (p. ej. perfil demo sin correo) para no impedir
+ * MailSender (p. ej. perfil demo sin correo) para no impedir
  * el arranque del contexto.
  */
 @Component
@@ -27,11 +27,11 @@ public class SuspiciousLoginNotifier {
     private static final ZoneId ZONE = ZoneId.of("America/Bogota");
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
-    private final ObjectProvider<JavaMailSender> mailSenders;
+    private final ObjectProvider<MailSender> mailSenders;
     private final boolean mailEnabled;
 
     public SuspiciousLoginNotifier(
-            ObjectProvider<JavaMailSender> mailSenders,
+            ObjectProvider<MailSender> mailSenders,
             @Value("${app.mail.enabled:false}") boolean mailEnabled) {
         this.mailSenders = mailSenders;
         this.mailEnabled = mailEnabled;
@@ -39,7 +39,7 @@ public class SuspiciousLoginNotifier {
 
     @Async
     public void notifyBlockedAccount(String email, String clientIp) {
-        JavaMailSender mailSender = mailSenders.getIfAvailable();
+        MailSender mailSender = mailSenders.getIfAvailable();
         if (!mailEnabled || mailSender == null) {
             log.warn("Cuenta {} bloqueada por intentos fallidos desde IP {}. "
                     + "Aviso por correo omitido (correo no disponible).", email, clientIp);
