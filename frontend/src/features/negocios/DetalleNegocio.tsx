@@ -276,8 +276,12 @@ export default function DetalleNegocio() {
                       {selectedBusiness.name}
                     </h1>
                   </div>
-                  <div className="flex items-center gap-1 text-[#18211e] text-[14px] font-semibold pt-1">
-                    ⭐ {selectedBusiness.rating} <span className="text-[#66716c] font-normal">({selectedBusiness.reviewCount} reseñas)</span>
+                  <div className="flex items-center gap-1.5 text-[#18211e] text-[14px] font-semibold pt-1">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#eab308" className="text-amber-500 shrink-0">
+                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                    </svg>
+                    <span>{selectedBusiness.rating}</span>
+                    <span className="text-[#66716c] font-normal">({selectedBusiness.reviewCount} reseñas)</span>
                   </div>
                 </div>
 
@@ -287,24 +291,38 @@ export default function DetalleNegocio() {
               </div>
             </div>
 
-            {/* Datos de contacto y ubicación requeridos por HU 3.1.2 */}
+            {/* Datos de contacto y ubicación */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 pt-6 mt-6 border-t border-[#e2e5df]">
               <div className="flex gap-3">
-                <div className="w-8 h-8 rounded-full bg-[#e6f0ef] text-[#005146] flex items-center justify-center shrink-0">📍</div>
+                <div className="w-8 h-8 rounded-full bg-[#e6f0ef] text-[#005146] flex items-center justify-center shrink-0">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                    <circle cx="12" cy="10" r="3" />
+                  </svg>
+                </div>
                 <div>
                   <p className="text-[#66716c] text-[11px] font-medium">Ubicación</p>
                   <p className="text-[#18211e] text-[13px] font-semibold mt-0.5">{selectedBusiness.location}</p>
                 </div>
               </div>
               <div className="flex gap-3">
-                <div className="w-8 h-8 rounded-full bg-[#e6f0ef] text-[#005146] flex items-center justify-center shrink-0">📞</div>
+                <div className="w-8 h-8 rounded-full bg-[#e6f0ef] text-[#005146] flex items-center justify-center shrink-0">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                  </svg>
+                </div>
                 <div>
                   <p className="text-[#66716c] text-[11px] font-medium">Teléfono de contacto</p>
                   <p className="text-[#18211e] text-[13px] font-semibold mt-0.5">{selectedBusiness.phone}</p>
                 </div>
               </div>
               <div className="flex gap-3">
-                <div className="w-8 h-8 rounded-full bg-[#e6f0ef] text-[#005146] flex items-center justify-center shrink-0">✉️</div>
+                <div className="w-8 h-8 rounded-full bg-[#e6f0ef] text-[#005146] flex items-center justify-center shrink-0">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="2" y="4" width="20" height="16" rx="2" />
+                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                  </svg>
+                </div>
                 <div>
                   <p className="text-[#66716c] text-[11px] font-medium">Correo electrónico</p>
                   <p className="text-[#18211e] text-[13px] font-semibold mt-0.5">{selectedBusiness.email}</p>

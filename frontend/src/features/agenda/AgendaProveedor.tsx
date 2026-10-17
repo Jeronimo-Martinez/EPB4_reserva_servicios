@@ -135,15 +135,19 @@ export default function AgendaProveedor() {
       <NavBar />
 
       <main className="flex-1 w-full max-w-[1340px] mx-auto px-5 md:px-8 py-8 md:py-10 flex gap-8">
-        <aside className="shrink-0 hidden xl:block">
+        <aside className="shrink-0 hidden lg:block w-[240px]">
           <div className="mb-6">
             <p className="text-[#005146] text-[11px] font-semibold tracking-[0.88px] uppercase mb-1">
-              Provider Hub
+              Panel Profesional
             </p>
-            <p className="text-[#18211e] text-[16px] font-bold" style={{ fontFamily: '"DM Sans:Bold", sans-serif' }}>
+            <p className="text-[#18211e] text-[17px] font-bold leading-snug">
               {businessName}
             </p>
-            <p className="text-[#66716c] text-[13px]">{businessCategory}</p>
+            {businessCategory && (
+              <span className="inline-block mt-1 text-[12px] text-[#005146] bg-[#e6f0ef] px-2.5 py-0.5 rounded-full font-medium">
+                {businessCategory}
+              </span>
+            )}
           </div>
           <SideNav items={sideNavItems} active="Agenda" />
         </aside>
@@ -152,7 +156,7 @@ export default function AgendaProveedor() {
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div>
               <p className="text-[#005146] text-[11px] font-semibold tracking-[0.88px] uppercase mb-1">
-                Panel del proveedor (HU 2.2.3)
+                Panel del proveedor
               </p>
               <h1 className="text-[#18211e] text-[26px] font-bold leading-[34px] tracking-[-0.52px]" style={{ fontFamily: '"DM Sans:Bold", sans-serif' }}>
                 Mi agenda de citas

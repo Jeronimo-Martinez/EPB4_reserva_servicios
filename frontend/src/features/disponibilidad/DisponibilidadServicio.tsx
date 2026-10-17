@@ -115,16 +115,22 @@ export default function DisponibilidadServicio({
       <main className="flex-1 w-full max-w-[1120px] mx-auto px-5 md:px-8 py-8 md:py-10 animate-fade-in">
         <button
           type="button"
-          onClick={() => navigate('negocio')}
+          onClick={() => {
+            if (selectedServiceForBooking?.origen === 'catalogo') {
+              navigate('catalogo');
+            } else {
+              navigate('negocio');
+            }
+          }}
           className="flex items-center gap-1.5 text-[#66716c] hover:text-[#18211e] text-[13px] font-medium transition-colors cursor-pointer bg-transparent border-none mb-5"
         >
-          ← Volver al detalle del negocio
+          ← Volver
         </button>
 
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
           <div>
             <p className="text-[#005146] text-[11px] font-semibold tracking-[0.88px] uppercase mb-1">
-              Agendamiento (HU 3.1.3)
+              Agendamiento en línea
             </p>
             <h1 className="text-[#18211e] text-[28px] font-bold leading-[36px] tracking-[-0.56px]" style={{ fontFamily: '"DM Sans:Bold", sans-serif' }}>
               Fechas y horarios disponibles

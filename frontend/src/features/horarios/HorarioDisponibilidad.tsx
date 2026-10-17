@@ -160,15 +160,19 @@ export default function HorarioDisponibilidad() {
       <NavBar />
 
       <main className="flex-1 w-full max-w-[1280px] mx-auto px-5 md:px-8 py-8 md:py-10 flex gap-8">
-        <aside className="shrink-0 hidden lg:block">
+        <aside className="shrink-0 hidden lg:block w-[240px]">
           <div className="mb-6">
             <p className="text-[#005146] text-[11px] font-semibold tracking-[0.88px] uppercase mb-1">
-              Provider Hub
+              Panel Profesional
             </p>
-            <p className="text-[#18211e] text-[16px] font-bold" style={{ fontFamily: '"DM Sans:Bold", sans-serif' }}>
+            <p className="text-[#18211e] text-[17px] font-bold leading-snug">
               {businessName}
             </p>
-            <p className="text-[#66716c] text-[13px]">{businessCategory}</p>
+            {businessCategory && (
+              <span className="inline-block mt-1 text-[12px] text-[#005146] bg-[#e6f0ef] px-2.5 py-0.5 rounded-full font-medium">
+                {businessCategory}
+              </span>
+            )}
           </div>
           <SideNav items={sideNavItems} active="Horarios" />
         </aside>
