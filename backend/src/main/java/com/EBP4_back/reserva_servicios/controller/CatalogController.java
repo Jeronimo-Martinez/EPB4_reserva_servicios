@@ -47,6 +47,11 @@ public class CatalogController {
         return catalogService.availability(id, from, to);
     }
 
+    @GetMapping("/businesses")
+    public List<BusinessDetailResponse> businesses(@RequestParam(value = "search", required = false) String search) {
+        return catalogService.searchBusinesses(search);
+    }
+
     @GetMapping("/businesses/{id}")
     public BusinessDetailResponse business(@PathVariable UUID id) {
         return catalogService.getBusiness(id);

@@ -10,6 +10,6 @@ body:
   type: json
   content: |-
     {
-      "providerEmail": "veterinaria.demo@example.com",
+      "providerEmail": "centro.vital@example.com",
       "available": false
     }

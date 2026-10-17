@@ -52,10 +52,10 @@ class CatalogControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items").isArray())
                 .andExpect(jsonPath("$.total").exists())
-                .andExpect(jsonPath("$.items[?(@.name=='Cirugia de Esterilizacion')].available")
+                .andExpect(jsonPath("$.items[?(@.name=='Limpieza Facial Profunda')].available")
                         .value(false))
-                .andExpect(jsonPath("$.items[?(@.name=='Consulta General')].businessName")
-                        .value("Veterinaria Huellitas"))
+                .andExpect(jsonPath("$.items[?(@.name=='Corte de Cabello Clasico')].businessName")
+                        .value("Centro Vital"))
                 .andExpect(jsonPath("$.items[0].currency").value("COP"))
                 .andExpect(jsonPath("$.items[0].averageRating").exists())
                 .andExpect(jsonPath("$.items[0].reviewCount").value(0));
@@ -63,21 +63,21 @@ class CatalogControllerTest {
 
     @Test
     void filtersByCategoryCaseInsensitive() throws Exception {
-        mockMvc.perform(get("/api/v1/catalog").param("category", "consulta general"))
+        mockMvc.perform(get("/api/v1/catalog").param("category", "belleza"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.appliedCategory").value("consulta general"))
-                .andExpect(jsonPath("$.items[?(@.name=='Consulta General')]").exists())
-                .andExpect(jsonPath("$.items[?(@.name=='Peluqueria Canina')]").doesNotExist());
+                .andExpect(jsonPath("$.appliedCategory").value("belleza"))
+                .andExpect(jsonPath("$.items[?(@.name=='Corte de Cabello Clasico')]").exists())
+                .andExpect(jsonPath("$.items[?(@.name=='Masaje Descontracturante')]").doesNotExist());
     }
 
     @Test
     void searchesByServiceNameAndByBusinessName() throws Exception {
-        mockMvc.perform(get("/api/v1/catalog").param("search", "canina"))
+        mockMvc.perform(get("/api/v1/catalog").param("search", "masaje"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.appliedSearch").value("canina"))
-                .andExpect(jsonPath("$.items[0].name").value("Peluqueria Canina"));
+                .andExpect(jsonPath("$.appliedSearch").value("masaje"))
+                .andExpect(jsonPath("$.items[0].name").value("Masaje Descontracturante"));
 
-        mockMvc.perform(get("/api/v1/catalog").param("search", "huellitas"))
+        mockMvc.perform(get("/api/v1/catalog").param("search", "centro vital"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.total").value(org.hamcrest.Matchers.greaterThanOrEqualTo(3)));
     }
@@ -85,11 +85,11 @@ class CatalogControllerTest {
     @Test
     void combinesSearchAndCategoryFilters() throws Exception {
         mockMvc.perform(get("/api/v1/catalog")
-                        .param("search", "consulta")
-                        .param("category", "Consulta general"))
+                        .param("search", "corte")
+                        .param("category", "Belleza"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.items[?(@.name=='Consulta General')]").exists())
-                .andExpect(jsonPath("$.items[?(@.name=='Peluqueria Canina')]").doesNotExist());
+                .andExpect(jsonPath("$.items[?(@.name=='Corte de Cabello Clasico')]").exists())
+                .andExpect(jsonPath("$.items[?(@.name=='Masaje Descontracturante')]").doesNotExist());
     }
 
     @Test
@@ -148,23 +148,44 @@ class CatalogControllerTest {
     @Test
     void businessDetailShowsContactInfoAndServicesWithBookableFlag() throws Exception {
         Business business = newBusiness(true);
-        services.save(service(business, "Consulta Activa", true));
-        services.save(service(business, "Consulta Pausada", false));
+        services.save(service(business, "Corte Activo", true));
+        services.save(service(business, "Corte Pausado", false));
 
         mockMvc.perform(get("/api/v1/catalog/businesses/" + business.getId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name").value("Veterinaria Catalogo"))
-                .andExpect(jsonPath("$.category").value("Clinica veterinaria"))
+                .andExpect(jsonPath("$.name").value("Negocio Catalogo"))
+                .andExpect(jsonPath("$.category").value("Belleza"))
                 .andExpect(jsonPath("$.address").value("Calle 93 #14-28"))
                 .andExpect(jsonPath("$.phone").value("+576017652890"))
                 .andExpect(jsonPath("$.email").value(business.getUser().getEmail()))
                 .andExpect(jsonPath("$.reviewCount").value(0))
                 .andExpect(jsonPath("$.services.length()").value(2))
-                .andExpect(jsonPath("$.services[?(@.name=='Consulta Activa')].available").value(true))
-                .andExpect(jsonPath("$.services[?(@.name=='Consulta Pausada')].available").value(false));
+                .andExpect(jsonPath("$.services[?(@.name=='Corte Activo')].available").value(true))
+                .andExpect(jsonPath("$.services[?(@.name=='Corte Pausado')].available").value(false));
 
         mockMvc.perform(get("/api/v1/catalog/businesses/00000000-0000-0000-0000-000000000000"))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void searchesBusinessesByServiceNameBusinessNameOrNothing() throws Exception {
+        Business business = newBusiness(true);
+        String uniqueService = "Servicio Unico " + System.nanoTime();
+        services.save(service(business, uniqueService, true));
+
+        mockMvc.perform(get("/api/v1/catalog/businesses").param("search", uniqueService.toLowerCase()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].id").value(business.getId().toString()))
+                .andExpect(jsonPath("$[0].services[0].name").value(uniqueService));
+        mockMvc.perform(get("/api/v1/catalog/businesses").param("search", "centro vital"))
+                .andExpect(jsonPath("$[?(@.name=='Centro Vital')]").exists());
+        mockMvc.perform(get("/api/v1/catalog/businesses").param("search", "  "))
+                .andExpect(jsonPath("$[?(@.name=='Centro Vital')]").exists())
+                .andExpect(jsonPath("$[?(@.id=='" + business.getId() + "')]").exists());
+        mockMvc.perform(get("/api/v1/catalog/businesses").param("search", "negocio-inexistente-xyz"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
     }
 
     @Test
@@ -181,7 +202,7 @@ class CatalogControllerTest {
 
     @Test
     void availabilityRespectsHoursDurationAndTakenSlots() throws Exception {
-        ServiceOffering service = services.save(service(newBusiness(true), "Consulta 60", true));
+        ServiceOffering service = services.save(service(newBusiness(true), "Masaje 60", true));
         LocalDate monday = LocalDate.now(Business.ZONE).with(TemporalAdjusters.next(DayOfWeek.MONDAY)).plusWeeks(2);
         // 60 min inside 09:00-12:00 every 30 min gives 09:00..11:00; a hold at 10:00 removes 09:30, 10:00 and 10:30.
         mockMvc.perform(post("/api/v1/reservations/holds").contentType(MediaType.APPLICATION_JSON)
@@ -209,7 +230,7 @@ class CatalogControllerTest {
     }
 
     private ServiceOffering service(Business business, String name, boolean available) {
-        return new ServiceOffering(business, name, "Consulta general", "Descripcion", 60, new BigDecimal("45000.00"), available);
+        return new ServiceOffering(business, name, "Belleza", "Descripcion", 60, new BigDecimal("45000.00"), available);
     }
 
     // Only Mondays 09:00-12:00 when withHours, otherwise no schedule configured.
@@ -217,7 +238,7 @@ class CatalogControllerTest {
         User user = new User("Proveedor", "Catalogo", "catalogo." + System.nanoTime() + "@example.com",
                 "+576017652890", "hash", UserRole.PROVEEDOR, true);
         user.verify();
-        Business business = new Business(users.save(user), "Veterinaria Catalogo", "Clinica veterinaria", "Descripcion",
+        Business business = new Business(users.save(user), "Negocio Catalogo", "Belleza", "Descripcion",
                 "Calle 93 #14-28");
         if (withHours) {
             business.replaceHours(List.of(new BusinessHours(DayOfWeek.MONDAY, LocalTime.of(9, 0), LocalTime.of(12, 0))));

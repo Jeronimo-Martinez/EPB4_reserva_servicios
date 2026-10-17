@@ -32,7 +32,7 @@ class ProviderRegistrationControllerTest {
         String email = "proveedor." + System.nanoTime() + "@example.com";
         mockMvc.perform(post("/api/v1/registrations/provider")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(providerBody(email, "Proveedor123", true, "Veterinaria Test", "Clinica veterinaria")))
+                        .content(providerBody(email, "Proveedor123", true, "Centro Test", "Salud y Bienestar")))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.verificationRequired").value(true));
 
@@ -51,20 +51,20 @@ class ProviderRegistrationControllerTest {
     void rejectsDuplicateEmail() throws Exception {
         String email = "dupe." + System.nanoTime() + "@example.com";
         mockMvc.perform(post("/api/v1/registrations/provider").contentType(MediaType.APPLICATION_JSON)
-                        .content(providerBody(email, "Proveedor123", true, "Veterinaria Dup", "Clinica veterinaria")))
+                        .content(providerBody(email, "Proveedor123", true, "Centro Dup", "Belleza")))
                 .andExpect(status().isCreated());
         mockMvc.perform(post("/api/v1/registrations/provider").contentType(MediaType.APPLICATION_JSON)
-                        .content(providerBody(email, "Proveedor123", true, "Veterinaria Dup 2", "Clinica veterinaria")))
+                        .content(providerBody(email, "Proveedor123", true, "Centro Dup 2", "Belleza")))
                 .andExpect(status().isConflict());
     }
 
     @Test
     void rejectsWeakPasswordAndUnacceptedTerms() throws Exception {
         mockMvc.perform(post("/api/v1/registrations/provider").contentType(MediaType.APPLICATION_JSON)
-                        .content(providerBody("weakp." + System.nanoTime() + "@example.com", "weak", true, "Veterinaria W", "Clinica veterinaria")))
+                        .content(providerBody("weakp." + System.nanoTime() + "@example.com", "weak", true, "Centro W", "Belleza")))
                 .andExpect(status().isBadRequest());
         mockMvc.perform(post("/api/v1/registrations/provider").contentType(MediaType.APPLICATION_JSON)
-                        .content(providerBody("terms." + System.nanoTime() + "@example.com", "Proveedor123", false, "Veterinaria T", "Clinica veterinaria")))
+                        .content(providerBody("terms." + System.nanoTime() + "@example.com", "Proveedor123", false, "Centro T", "Belleza")))
                 .andExpect(status().isBadRequest());
     }
 
@@ -72,7 +72,7 @@ class ProviderRegistrationControllerTest {
     void rejectsInvalidCodeAndResendsIt() throws Exception {
         String email = "resend." + System.nanoTime() + "@example.com";
         mockMvc.perform(post("/api/v1/registrations/provider").contentType(MediaType.APPLICATION_JSON)
-                        .content(providerBody(email, "Proveedor123", true, "Veterinaria Resend", "Clinica veterinaria")))
+                        .content(providerBody(email, "Proveedor123", true, "Centro Resend", "Salud y Bienestar")))
                 .andExpect(status().isCreated());
 
         mockMvc.perform(post("/api/v1/registrations/verify").contentType(MediaType.APPLICATION_JSON)

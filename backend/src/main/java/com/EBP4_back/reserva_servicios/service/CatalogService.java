@@ -64,9 +64,18 @@ public class CatalogService {
 
     @Transactional(readOnly = true)
     public BusinessDetailResponse getBusiness(UUID id) {
-        Business business = businessRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "El negocio no existe"));
-        List<CatalogServiceResponse> services = serviceRepository.findAllByBusinessIdOrderByCreatedAtDesc(id).stream()
+        return toDetail(businessRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "El negocio no existe")));
+    }
+
+    @Transactional(readOnly = true)
+    public List<BusinessDetailResponse> searchBusinesses(String search) {
+        String term = normalize(search);
+        return businessRepository.search(term == null ? "" : term).stream().map(this::toDetail).toList();
+    }
+
+    private BusinessDetailResponse toDetail(Business business) {
+        List<CatalogServiceResponse> services = serviceRepository.findAllByBusinessIdOrderByCreatedAtDesc(business.getId()).stream()
                 .map(this::toResponse)
                 .toList();
         return new BusinessDetailResponse(business.getId(), business.getName(), business.getCategory(),

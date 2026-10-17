@@ -10,10 +10,10 @@ body:
   type: json
   content: |-
     {
-      "providerEmail": "veterinaria.demo@example.com",
-      "name": "Control Dental Felino",
-      "category": "Odontologia",
-      "description": "Revision dental y limpieza con ultrasonido para gatos.",
+      "providerEmail": "centro.vital@example.com",
+      "name": "Manicure Spa",
+      "category": "Belleza",
+      "description": "Manicure completo con hidratacion y esmaltado semipermanente.",
       "durationMinutes": 60,
       "price": 55000.00,
       "available": true

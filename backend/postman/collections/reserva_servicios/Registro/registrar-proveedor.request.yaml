@@ -12,12 +12,12 @@ body:
     {
       "firstName": "Jeronimo",
       "lastName": "Martinez",
-      "email": "huellitas.registro@example.com",
+      "email": "centro.vital.demo@example.com",
       "phone": "+573001112233",
       "password": "Proveedor123",
       "termsAccepted": true,
-      "businessName": "Veterinaria Huellitas",
-      "businessCategory": "Clinica veterinaria",
-      "businessDescription": "Clinica veterinaria para perros y gatos: consultas, vacunacion, peluqueria y cirugia.",
+      "businessName": "Centro Vital",
+      "businessCategory": "Salud y Bienestar",
+      "businessDescription": "Centro integral de servicios de salud, belleza y bienestar personal.",
       "address": "Cra 43A #1-50, Medellin"
     }

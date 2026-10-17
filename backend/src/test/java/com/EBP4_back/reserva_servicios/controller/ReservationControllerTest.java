@@ -51,13 +51,13 @@ class ReservationControllerTest {
 
     @Test
     void holdShowsSummaryAndConfirmCreatesReservation() throws Exception {
-        String id = holdId(CLIENT, serviceId("Peluqueria Canina"), slot(9));
+        String id = holdId(CLIENT, serviceId("Masaje Descontracturante"), slot(9));
 
         mockMvc.perform(get("/api/v1/reservations/" + id).param("clientEmail", CLIENT))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("PENDIENTE"))
-                .andExpect(jsonPath("$.businessName").value("Veterinaria Huellitas"))
-                .andExpect(jsonPath("$.serviceName").value("Peluqueria Canina"))
+                .andExpect(jsonPath("$.businessName").value("Centro Vital"))
+                .andExpect(jsonPath("$.serviceName").value("Masaje Descontracturante"))
                 .andExpect(jsonPath("$.durationMinutes").value(60))
                 .andExpect(jsonPath("$.currency").value("COP"))
                 .andExpect(jsonPath("$.holdExpiresAt").exists());
@@ -74,12 +74,12 @@ class ReservationControllerTest {
     @Test
     void heldSlotBlocksOthersAndChangingSelectionReplacesHold() throws Exception {
         Instant slot = slot(11);
-        String first = holdId(CLIENT, serviceId("Peluqueria Canina"), slot);
+        String first = holdId(CLIENT, serviceId("Masaje Descontracturante"), slot);
 
-        hold(otherClient(), serviceId("Peluqueria Canina"), slot).andExpect(status().isConflict());
+        hold(otherClient(), serviceId("Masaje Descontracturante"), slot).andExpect(status().isConflict());
 
         // Going back and picking another service for the same slot must not collide with the own previous hold.
-        holdId(CLIENT, serviceId("Consulta General"), slot);
+        holdId(CLIENT, serviceId("Corte de Cabello Clasico"), slot);
         mockMvc.perform(get("/api/v1/reservations/" + first).param("clientEmail", CLIENT))
                 .andExpect(status().isNotFound());
     }
@@ -87,7 +87,7 @@ class ReservationControllerTest {
     @Test
     void expiredHoldIsRejectedAndFreesTheSlot() throws Exception {
         Instant slot = slot(13);
-        String id = holdId(CLIENT, serviceId("Peluqueria Canina"), slot);
+        String id = holdId(CLIENT, serviceId("Masaje Descontracturante"), slot);
         new TransactionTemplate(transactionManager).executeWithoutResult(tx -> entityManager
                 .createQuery("UPDATE Reservation r SET r.holdExpiresAt = :past WHERE r.id = :id")
                 .setParameter("past", Instant.now().minusSeconds(1))
@@ -95,19 +95,19 @@ class ReservationControllerTest {
                 .executeUpdate());
 
         confirm(id, CLIENT).andExpect(status().isGone());
-        hold(otherClient(), serviceId("Peluqueria Canina"), slot).andExpect(status().isCreated());
+        hold(otherClient(), serviceId("Masaje Descontracturante"), slot).andExpect(status().isCreated());
     }
 
     @Test
     void rejectsIncompleteDataUnavailableServiceAndForeignClient() throws Exception {
         mockMvc.perform(post("/api/v1/reservations/holds").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"clientEmail\":\"" + CLIENT + "\",\"serviceId\":\"" + serviceId("Peluqueria Canina") + "\"}"))
+                        .content("{\"clientEmail\":\"" + CLIENT + "\",\"serviceId\":\"" + serviceId("Masaje Descontracturante") + "\"}"))
                 .andExpect(status().isBadRequest());
-        hold(CLIENT, serviceId("Cirugia de Esterilizacion"), slot(15)).andExpect(status().isConflict());
+        hold(CLIENT, serviceId("Limpieza Facial Profunda"), slot(15)).andExpect(status().isConflict());
         // 17:30 + 60 min ends after the 18:00 closing time.
-        hold(CLIENT, serviceId("Peluqueria Canina"), slot(17).plusSeconds(1800)).andExpect(status().isBadRequest());
+        hold(CLIENT, serviceId("Masaje Descontracturante"), slot(17).plusSeconds(1800)).andExpect(status().isBadRequest());
 
-        String id = holdId(CLIENT, serviceId("Peluqueria Canina"), slot(15));
+        String id = holdId(CLIENT, serviceId("Masaje Descontracturante"), slot(15));
         confirm(id, otherClient()).andExpect(status().isForbidden());
     }
 
@@ -144,7 +144,7 @@ class ReservationControllerTest {
         return users.save(user).getEmail();
     }
 
-    // Veterinaria Huellitas (demo data) attends Monday to Saturday 08:00-18:00 Bogota time.
+    // Centro Vital (demo data) attends Monday to Saturday 08:00-18:00 Bogota time.
     private Instant slot(int hour) {
         return LocalDate.now(Business.ZONE).with(TemporalAdjusters.next(DayOfWeek.MONDAY)).plusWeeks(4)
                 .atTime(hour, 0).atZone(Business.ZONE).toInstant();

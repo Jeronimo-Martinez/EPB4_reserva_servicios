@@ -22,7 +22,7 @@ import org.springframework.test.web.servlet.MvcResult;
 @AutoConfigureMockMvc
 @ActiveProfiles("demo")
 class ServiceCatalogControllerTest {
-    private static final String PROVIDER_EMAIL = "veterinaria.demo@example.com";
+    private static final String PROVIDER_EMAIL = "centro.vital@example.com";
     private static final Pattern ID_PATTERN = Pattern.compile("\"id\"\\s*:\\s*\"([0-9a-fA-F\\-]+)\"");
 
     @Autowired
@@ -101,7 +101,7 @@ class ServiceCatalogControllerTest {
 
     private String serviceBody(String email, String name, int duration, String price, boolean available) {
         return """
-                {"providerEmail":"%s","name":"%s","category":"Consulta general",
+                {"providerEmail":"%s","name":"%s","category":"Belleza",
                 "description":"Descripcion","durationMinutes":%d,"price":%s,"available":%s}
                 """.formatted(email, name, duration, price, available);
     }

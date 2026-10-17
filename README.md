@@ -23,7 +23,7 @@ La API queda disponible en `http://localhost:8080`. Si el puerto está ocupado, 
 
 La documentación de endpoints está en [backend/docs/serviciosBackend.md](backend/docs/serviciosBackend.md).
 
-El perfil `demo` usa H2 en memoria con una veterinaria de ejemplo (`veterinaria.demo@example.com` / `Proveedor123`) y un cliente (`cliente.demo@example.com` / `Cliente123`).
+El perfil `demo` usa H2 en memoria con un proveedor de ejemplo, "Centro Vital" (`centro.vital@example.com` / `Proveedor123`), y un cliente (`cliente.demo@example.com` / `Cliente123`).
 
 ## Conectar con Supabase (PostgreSQL)
 

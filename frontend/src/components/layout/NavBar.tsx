@@ -30,6 +30,11 @@ export default function NavBar({ links: customLinks, trailing, avatarInitial: cu
         onClick: () => navigate('catalogo'),
       },
       {
+        label: 'Negocios',
+        active: currentView === 'negocios' || currentView === 'negocio',
+        onClick: () => navigate('negocios'),
+      },
+      {
         label: '¿Cómo funciona?',
         onClick: () => {
           navigate('landing');
@@ -44,8 +49,13 @@ export default function NavBar({ links: customLinks, trailing, avatarInitial: cu
     defaultLinks.push(
       {
         label: 'Explorar Servicios',
-        active: currentView === 'catalogo',
+        active: currentView === 'catalogo' || currentView === 'reservar',
         onClick: () => navigate('catalogo'),
+      },
+      {
+        label: 'Negocios',
+        active: currentView === 'negocios' || currentView === 'negocio',
+        onClick: () => navigate('negocios'),
       },
       {
         label: 'Mis Reservas',
@@ -62,12 +72,8 @@ export default function NavBar({ links: customLinks, trailing, avatarInitial: cu
       },
       {
         label: 'Agenda y Disponibilidad',
-        onClick: () => {
-          showNotification(
-            'info',
-            'Agenda y Disponibilidad: Módulo actualmente en desarrollo.'
-          );
-        },
+        active: currentView === 'agenda' || currentView === 'horarios',
+        onClick: () => navigate('agenda'),
       },
       {
         label: 'Reservas Recibidas',

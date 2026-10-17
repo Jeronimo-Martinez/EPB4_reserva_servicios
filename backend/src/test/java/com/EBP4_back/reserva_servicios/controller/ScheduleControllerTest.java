@@ -94,7 +94,7 @@ class ScheduleControllerTest {
     void agendaShowsReservationsByDayWeekAndMonth() throws Exception {
         Business business = newProvider(true);
         String provider = business.getUser().getEmail();
-        ServiceOffering service = services.save(new ServiceOffering(business, "Consulta Agenda", "Consulta general",
+        ServiceOffering service = services.save(new ServiceOffering(business, "Masaje Agenda", "Salud y Bienestar",
                 "Descripcion", 60, new BigDecimal("80000.00"), true));
         LocalDate wednesday = LocalDate.now(Business.ZONE).with(TemporalAdjusters.next(DayOfWeek.WEDNESDAY)).plusWeeks(5);
         String client = newClient();
@@ -112,7 +112,8 @@ class ScheduleControllerTest {
                 .andExpect(jsonPath("$.days[2].openTime").value("09:00:00"))
                 .andExpect(jsonPath("$.days[2].reservations[0].id").value(id))
                 .andExpect(jsonPath("$.days[2].reservations[0].clientName").value("Cliente Agenda"))
-                .andExpect(jsonPath("$.days[2].reservations[0].serviceName").value("Consulta Agenda"))
+                .andExpect(jsonPath("$.days[2].reservations[0].clientPhone").value("+573009998877"))
+                .andExpect(jsonPath("$.days[2].reservations[0].serviceName").value("Masaje Agenda"))
                 .andExpect(jsonPath("$.days[2].reservations[0].durationMinutes").value(60))
                 .andExpect(jsonPath("$.days[2].reservations[0].status").value("CONFIRMADA"))
                 .andExpect(jsonPath("$.days[6].openTime").doesNotExist());
@@ -163,7 +164,7 @@ class ScheduleControllerTest {
         User user = new User("Proveedor", "Test", "prov." + System.nanoTime() + "@example.com", "+573001112233",
                 "hash", UserRole.PROVEEDOR, true);
         user.verify();
-        Business business = new Business(users.save(user), "Veterinaria Test", "Clinica veterinaria", "Descripcion", "Calle 1");
+        Business business = new Business(users.save(user), "Negocio Test", "Belleza", "Descripcion", "Calle 1");
         if (withHours) {
             business.replaceHours(Stream.of(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY,
                             DayOfWeek.THURSDAY, DayOfWeek.FRIDAY)

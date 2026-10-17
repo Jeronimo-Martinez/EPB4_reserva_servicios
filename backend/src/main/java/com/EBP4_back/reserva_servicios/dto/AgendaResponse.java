@@ -21,6 +21,7 @@ public record AgendaResponse(
             UUID id,
             String clientName,
             String clientEmail,
+            String clientPhone,
             String serviceName,
             Instant startAt,
             Instant endAt,

@@ -10,7 +10,7 @@ body:
   type: json
   content: |-
     {
-      "providerEmail": "veterinaria.demo@example.com",
+      "providerEmail": "centro.vital@example.com",
       "days": [
         { "dayOfWeek": "MONDAY", "startTime": "08:00", "endTime": "18:00" },
         { "dayOfWeek": "TUESDAY", "startTime": "08:00", "endTime": "18:00" },

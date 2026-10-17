@@ -126,7 +126,7 @@ public class ScheduleService {
         User client = reservation.getClient();
         String clientName = client.getLastName() == null
                 ? client.getFirstName() : client.getFirstName() + " " + client.getLastName();
-        return new AgendaResponse.Entry(reservation.getId(), clientName, client.getEmail(),
+        return new AgendaResponse.Entry(reservation.getId(), clientName, client.getEmail(), client.getPhone(),
                 reservation.getService().getName(), reservation.getStartAt(), reservation.getEndAt(),
                 reservation.getService().getDurationMinutes(), reservation.getStatus().name());
     }
