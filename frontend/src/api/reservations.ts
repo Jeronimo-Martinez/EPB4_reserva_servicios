@@ -15,6 +15,11 @@ export interface ReservationResponse {
   holdExpiresAt: string | null;
 }
 
+/** Reservas confirmadas del cliente con sesión (el backend lo identifica por el token), por fecha ascendente. */
+export async function fetchMyReservations(): Promise<ReservationResponse[]> {
+  return request<ReservationResponse[]>('/api/v1/reservations');
+}
+
 /** Bloquea el horario por unos minutos mientras el cliente revisa y confirma. 409 si otro cliente ya lo tomó. */
 export async function createHold(serviceId: string, startAt: string): Promise<ReservationResponse> {
   return request<ReservationResponse>('/api/v1/reservations/holds', {

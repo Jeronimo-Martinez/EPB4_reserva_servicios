@@ -262,6 +262,9 @@ Bloquea el horario por 10 minutos (botón **Continuar**). Responde `201` con la 
 #### `POST /api/v1/reservations/{id}/confirm`
 Confirma la reserva (botón **Confirmar reserva**), sin cuerpo. Responde `200` con `status: "CONFIRMADA"`; `410` si el bloqueo expiró (la pantalla vuelve a la selección de fecha y hora con un aviso) y `409` si ya estaba confirmada.
 
+#### Mis reservas — `GET /api/v1/reservations`
+Pantalla `src/features/reservas/MisReservas.tsx` (**Mis Reservas** en la barra del cliente o **Ver mis reservas** al confirmar). Lista solo las reservas `CONFIRMADA` del cliente con sesión, ordenadas por fecha; el backend lo identifica por el token, así que nunca devuelve reservas de otros clientes (HUS-29). Los bloqueos temporales no aparecen. La pantalla las separa en **Próximas citas** (aún no terminan) y **Citas pasadas** (la más reciente primero). Responde `200` con una lista de objetos como el de la confirmación (`message: null`), `401` sin sesión y `403` para proveedores.
+
 ---
 
 ### 4. Horario de Atención del Proveedor (HU-09)

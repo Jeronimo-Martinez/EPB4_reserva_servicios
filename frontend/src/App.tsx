@@ -6,7 +6,7 @@ import { InicioSesion, RegistroCliente, RegistroProveedor } from '@/features/aut
 import { GestionServicios } from '@/features/servicios';
 import { HorarioAtencion } from '@/features/horarios';
 import { AgendaNegocio } from '@/features/agenda';
-import { ReservarCita } from '@/features/reservas';
+import { MisReservas, ReservarCita } from '@/features/reservas';
 import { DetalleNegocio, ResultadosNegocios } from '@/features/negocios';
 import { PerfilUsuario } from '@/features/perfil';
 
@@ -16,9 +16,9 @@ function MainRouter() {
   const renderCurrentView = () => {
     switch (currentView) {
       case 'catalogo':
-        return <CatalogoServicios initialView="catalogo" />;
+        return <CatalogoServicios />;
       case 'reservas':
-        return <CatalogoServicios initialView="reservas" />;
+        return <MisReservas />;
       case 'login':
         return <InicioSesion />;
       case 'registro-cliente':

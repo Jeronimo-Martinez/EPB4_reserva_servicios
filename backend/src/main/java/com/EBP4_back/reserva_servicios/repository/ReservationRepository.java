@@ -5,6 +5,7 @@ import com.EBP4_back.reserva_servicios.enums.ReservationStatus;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -23,4 +24,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, UUID> 
             @Param("confirmed") ReservationStatus confirmed);
 
     void deleteAllByClientEmailIgnoreCaseAndStatus(String email, ReservationStatus status);
+
+    @EntityGraph(attributePaths = {"service", "service.business"})
+    List<Reservation> findAllByClientIdAndStatusOrderByStartAtAsc(UUID clientId, ReservationStatus status);
 }

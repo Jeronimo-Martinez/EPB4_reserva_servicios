@@ -12,6 +12,7 @@ import com.EBP4_back.reserva_servicios.repository.UserRepository;
 import com.EBP4_back.reserva_servicios.security.AccessAuditService;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -66,6 +67,13 @@ public class ReservationService {
         }
         return toResponse(reservationRepository.save(hold),
                 "Horario reservado temporalmente por " + HOLD_MINUTES + " minutos, completa tu reserva");
+    }
+
+    // "Mis reservas": the client id comes from the session token, so other clients' reservations are never listed.
+    @Transactional(readOnly = true)
+    public List<ReservationResponse> listOwn(UUID clientId) {
+        return reservationRepository.findAllByClientIdAndStatusOrderByStartAtAsc(clientId, ReservationStatus.CONFIRMADA)
+                .stream().map(reservation -> toResponse(reservation, null)).toList();
     }
 
     @Transactional(readOnly = true)
