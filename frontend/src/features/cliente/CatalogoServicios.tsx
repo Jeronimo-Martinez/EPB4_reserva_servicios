@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { NavBar } from '@/components/layout';
 import { EmptyState } from '@/components/ui';
 import { useAuth } from '@/context/AuthContext';
+import { useBooking } from '@/context/BookingContext';
 import { Service, ServiceCategory } from '@/types/service';
 import { fetchCatalogServices } from '@/api/services';
 import { ApiError } from '@/api/client';
@@ -23,18 +24,12 @@ interface CatalogoServiciosProps {
 
 export default function CatalogoServicios({ initialView = 'catalogo' }: CatalogoServiciosProps) {
   const { user, navigate, showNotification } = useAuth();
+  const { setSelectedServiceForBooking } = useBooking();
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<ServiceCategory>('Todas');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedService, setSelectedService] = useState<Service | null>(null);
 
-  const [bookingForm, setBookingForm] = useState({
-    date: new Date(Date.now() + 86400000).toISOString().split('T')[0],
-    timeSlot: '10:00 AM',
-    notes: '',
-  });
-  const [bookingSubmitting, setBookingSubmitting] = useState(false);
 
   useEffect(() => {
     loadServices();
@@ -63,27 +58,16 @@ export default function CatalogoServicios({ initialView = 'catalogo' }: Catalogo
   });
 
   const handleOpenBooking = (service: Service) => {
-    setSelectedService(service);
-  };
-
-  const handleCloseBooking = () => {
-    setSelectedService(null);
-  };
-
-  const handleConfirmBooking = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedService) return;
-
-    setBookingSubmitting(true);
-    try {
-      showNotification('success', 'Funcionalidad de reservas próximamente disponible.');
-      setSelectedService(null);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'No se pudo completar la reserva.';
-      showNotification('error', msg);
-    } finally {
-      setBookingSubmitting(false);
-    }
+    setSelectedServiceForBooking({
+      id: service.id,
+      nombre: service.name,
+      duracion: `${service.durationMinutes} min`,
+      duracionMin: service.durationMinutes,
+      precio: service.price,
+      precioStr: `$${service.price.toLocaleString('es-CO')}`,
+      origen: 'catalogo',
+    });
+    navigate('disponibilidad');
   };
 
   const isReservasView = initialView === 'reservas';
@@ -356,106 +340,6 @@ export default function CatalogoServicios({ initialView = 'catalogo' }: Catalogo
           </div>
         )}
       </main>
-
-      {selectedService && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 backdrop-blur-xs animate-modal-backdrop">
-          <div className="bg-[#fcfcf8] border border-[#d4d9d3] rounded-[16px] max-w-[500px] w-full p-6 md:p-8 shadow-2xl relative animate-modal-pop">
-            <button
-              type="button"
-              onClick={handleCloseBooking}
-              className="absolute top-5 right-5 text-[#66716c] hover:text-[#18211e] p-1 rounded-full cursor-pointer bg-transparent border-none"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              </svg>
-            </button>
-
-            <span className="text-[#005146] text-[12px] font-bold uppercase tracking-wider block mb-1">
-              Agendar Servicio
-            </span>
-            <h3 className="text-[22px] font-bold text-[#18211e] mb-1">
-              {selectedService.name}
-            </h3>
-            <p className="text-[13px] text-[#66716c] mb-6">
-              Ofrecido por: <strong className="text-[#18211e]">{selectedService.businessName}</strong>
-            </p>
-
-            <form onSubmit={handleConfirmBooking} className="flex flex-col gap-4">
-              <div className="bg-[#f2f3ee] p-4 rounded-[10px] flex justify-between items-center text-[14px]">
-                <div>
-                  <span className="text-[#66716c] block text-[12px]">Duración estimada</span>
-                  <strong className="text-[#18211e]">{selectedService.durationMinutes} minutos</strong>
-                </div>
-                <div className="text-right">
-                  <span className="text-[#66716c] block text-[12px]">Total a pagar</span>
-                  <strong className="text-[#005146] text-[18px]">${selectedService.price.toLocaleString('es-CO')}</strong>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[14px] font-medium text-[#18211e] mb-1">
-                  Fecha de la cita
-                </label>
-                <input
-                  type="date"
-                  required
-                  value={bookingForm.date}
-                  onChange={(e) => setBookingForm({ ...bookingForm, date: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-white border border-[#d4d9d3] rounded-[8px] text-[14px] text-[#18211e] focus:border-[#005146] outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[14px] font-medium text-[#18211e] mb-1">
-                  Horario preferido
-                </label>
-                <select
-                  value={bookingForm.timeSlot}
-                  onChange={(e) => setBookingForm({ ...bookingForm, timeSlot: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-white border border-[#d4d9d3] rounded-[8px] text-[14px] text-[#18211e] focus:border-[#005146] outline-none"
-                >
-                  <option value="09:00 AM">09:00 AM</option>
-                  <option value="10:00 AM">10:00 AM</option>
-                  <option value="11:30 AM">11:30 AM</option>
-                  <option value="02:00 PM">02:00 PM</option>
-                  <option value="03:30 PM">03:30 PM</option>
-                  <option value="05:00 PM">05:00 PM</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[14px] font-medium text-[#18211e] mb-1">
-                  Notas o detalles adicionales (opcional)
-                </label>
-                <textarea
-                  rows={2}
-                  placeholder="Instrucciones específicas o requerimientos..."
-                  value={bookingForm.notes}
-                  onChange={(e) => setBookingForm({ ...bookingForm, notes: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-white border border-[#d4d9d3] rounded-[8px] text-[14px] text-[#18211e] focus:border-[#005146] outline-none resize-none"
-                />
-              </div>
-
-              <div className="pt-2 flex gap-3">
-                <button
-                  type="button"
-                  onClick={handleCloseBooking}
-                  className="flex-1 py-2.5 border border-[#d4d9d3] text-[#18211e] hover:bg-gray-100 rounded-[8px] text-[14px] font-medium transition-colors cursor-pointer bg-white"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={bookingSubmitting}
-                  className="flex-1 py-2.5 bg-[#005146] hover:bg-[#00403b] text-white rounded-[8px] text-[14px] font-semibold transition-all duration-150 cursor-pointer disabled:opacity-60 active:scale-95"
-                >
-                  {bookingSubmitting ? 'Confirmando...' : 'Confirmar Reserva'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
