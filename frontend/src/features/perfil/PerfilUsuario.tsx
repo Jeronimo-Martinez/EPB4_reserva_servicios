@@ -97,6 +97,26 @@ export default function PerfilUsuario() {
           onClick: () => navigate('servicios'),
         },
         {
+          label: 'Agenda',
+          icon: (
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+              <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.8" />
+              <path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            </svg>
+          ),
+          onClick: () => navigate('agenda'),
+        },
+        {
+          label: 'Horarios',
+          icon: (
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
+              <path d="M12 7v5l3 2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            </svg>
+          ),
+          onClick: () => navigate('horarios'),
+        },
+        {
           label: 'Perfil de Negocio',
           icon: (
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none">

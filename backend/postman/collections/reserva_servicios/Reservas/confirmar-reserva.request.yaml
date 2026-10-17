@@ -1,0 +1,14 @@
+$kind: http-request
+name: Confirmar Reserva
+order: 3000
+method: POST
+url: '{{baseUrl}}/api/v1/reservations/{{reservationId}}/confirm'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "clientEmail": "cliente.demo@example.com"
+    }

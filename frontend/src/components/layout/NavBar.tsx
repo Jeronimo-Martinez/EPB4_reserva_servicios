@@ -26,8 +26,13 @@ export default function NavBar({ links: customLinks, trailing, avatarInitial: cu
     defaultLinks.push(
       {
         label: 'Explorar Servicios',
-        active: currentView === 'catalogo' || currentView === 'reservas',
+        active: currentView === 'catalogo',
         onClick: () => navigate('catalogo'),
+      },
+      {
+        label: 'Descubrir Negocios',
+        active: currentView === 'negocio',
+        onClick: () => navigate('negocio'),
       },
       {
         label: '¿Cómo funciona?',
@@ -48,6 +53,11 @@ export default function NavBar({ links: customLinks, trailing, avatarInitial: cu
         onClick: () => navigate('catalogo'),
       },
       {
+        label: 'Descubrir Negocios',
+        active: currentView === 'negocio',
+        onClick: () => navigate('negocio'),
+      },
+      {
         label: 'Mis Reservas',
         active: currentView === 'reservas',
         onClick: () => navigate('reservas'),
@@ -61,31 +71,14 @@ export default function NavBar({ links: customLinks, trailing, avatarInitial: cu
         onClick: () => navigate('servicios'),
       },
       {
-        label: 'Agenda y Disponibilidad',
-        onClick: () => {
-          showNotification(
-            'info',
-            'Agenda y Disponibilidad: Módulo actualmente en desarrollo.'
-          );
-        },
+        label: 'Agenda',
+        active: currentView === 'agenda',
+        onClick: () => navigate('agenda'),
       },
       {
-        label: 'Reservas Recibidas',
-        onClick: () => {
-          showNotification(
-            'info',
-            'Reservas Recibidas: Módulo actualmente en desarrollo.'
-          );
-        },
-      },
-      {
-        label: 'Reportes',
-        onClick: () => {
-          showNotification(
-            'info',
-            'Reportes de Ocupación: Módulo actualmente en desarrollo.'
-          );
-        },
+        label: 'Horarios',
+        active: currentView === 'horarios',
+        onClick: () => navigate('horarios'),
       }
     );
   }
