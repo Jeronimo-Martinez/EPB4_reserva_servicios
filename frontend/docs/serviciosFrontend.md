@@ -56,6 +56,15 @@ frontend/
 
 ## Contratos de integración con el Backend
 
+### Sesión y permisos (HUS-29, HA-29)
+
+- `POST /api/v1/auth/login` y `POST /api/v1/registrations/verify` devuelven un `token`. `AuthContext` lo guarda con el usuario y `src/api/client.ts` lo envía en cada petición como `Authorization: Bearer <token>`.
+- **El backend identifica al usuario solo por el token**: ninguna petición lleva `providerEmail` ni `clientEmail`, y los datos que el navegador envíe nunca deciden permisos.
+- Permisos por rol: catálogo, negocios, registro y login son públicos; servicios, horarios y agenda son solo para `PROVEEDOR`; reservas solo para `CLIENTE`. `navigate()` aplica la misma regla en la interfaz.
+- `401`: no hay sesión o ya no es válida. Si había un token guardado, la app cierra la sesión y muestra *"Tu sesión terminó. Inicia sesión de nuevo."*.
+- `403`: el recurso es de otro usuario (*"No tienes permitido acceder a esta información"* / *"…editar esta información"*) o la función es de otro rol. Cada intento queda en el log `AUDIT` del backend; con 5 intentos en 15 minutos se cierran las sesiones de la cuenta y queda bloqueada 15 minutos.
+- `POST /api/v1/auth/logout` invalida el token en el backend (lo usa **Cerrar sesión**).
+
 Para las personas encargadas del backend, esta sección describe los endpoints y formatos de datos que el frontend consume actualmente o espera en las fases de integración:
 
 ### 1. Autenticación y Cuentas
@@ -247,11 +256,11 @@ Cupos libres (máximo 31 días por consulta; la pantalla pide 4 semanas desde ho
 Bloquea el horario por 10 minutos (botón **Continuar**). Responde `201` con la reserva `PENDIENTE` y `holdExpiresAt`; `409` si otro cliente ya tomó el horario (la pantalla muestra el aviso y recarga los cupos).
 
 ```json
-{ "clientEmail": "cliente.demo@example.com", "serviceId": "…", "startAt": "2026-10-19T13:00:00Z" }
+{ "serviceId": "…", "startAt": "2026-10-19T13:00:00Z" }
 ```
 
 #### `POST /api/v1/reservations/{id}/confirm`
-Confirma la reserva (botón **Confirmar reserva**) con `{ "clientEmail": "…" }`. Responde `200` con `status: "CONFIRMADA"`; `410` si el bloqueo expiró (la pantalla vuelve a la selección de fecha y hora con un aviso) y `409` si ya estaba confirmada.
+Confirma la reserva (botón **Confirmar reserva**), sin cuerpo. Responde `200` con `status: "CONFIRMADA"`; `410` si el bloqueo expiró (la pantalla vuelve a la selección de fecha y hora con un aviso) y `409` si ya estaba confirmada.
 
 ---
 
@@ -259,7 +268,7 @@ Confirma la reserva (botón **Confirmar reserva**) con `{ "clientEmail": "…" }
 
 Pantalla `src/features/horarios/HorarioAtencion.tsx`, accesible desde **Agenda y Disponibilidad** en la barra superior o **Horarios** en el panel lateral del proveedor. Las llamadas están en `src/api/schedule.ts`.
 
-#### `GET /api/v1/schedule/hours?providerEmail=...`
+#### `GET /api/v1/schedule/hours`
 Devuelve los días configurados. Si la lista está vacía, la pantalla muestra lunes a sábado activos sin horas, como en el mockup. Responde `404` si el proveedor no tiene negocio.
 
 Response `200 OK`:
@@ -277,7 +286,6 @@ Reemplaza el horario completo: los días que no se envían quedan sin atención.
 Request:
 ```json
 {
-  "providerEmail": "centro.vital@example.com",
   "days": [{ "dayOfWeek": "MONDAY", "startTime": "09:00", "endTime": "17:00" }]
 }
 ```
@@ -290,7 +298,7 @@ Responde `200` con el mismo formato del `GET` y `"message": "Horario guardado ex
 
 Pantalla `src/features/agenda/AgendaNegocio.tsx`, accesible desde **Agenda y Disponibilidad** en la barra superior o **Agenda** en el panel lateral (`ProviderAside`, compartido por todas las páginas del proveedor). Abre en la vista **Día**; la semana oculta los días sin atención que no tienen reservas y el mes muestra las reservas de cada día. Al seleccionar una reserva se abre el panel de detalle (se cierra con la X, `Esc` o clic fuera).
 
-#### `GET /api/v1/schedule/agenda?providerEmail=...&view=DIA|SEMANA|MES&date=YYYY-MM-DD`
+#### `GET /api/v1/schedule/agenda?view=DIA|SEMANA|MES&date=YYYY-MM-DD`
 `date` es cualquier día del periodo: la semana empieza el lunes y el mes el día 1. Las horas llegan en UTC y la pantalla las muestra en hora de Bogotá.
 
 Response `200 OK`:

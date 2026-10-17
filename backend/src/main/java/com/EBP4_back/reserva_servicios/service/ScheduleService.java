@@ -46,8 +46,8 @@ public class ScheduleService {
     }
 
     @Transactional
-    public BusinessHoursResponse saveHours(BusinessHoursRequest request) {
-        Business business = requireBusiness(request.providerEmail());
+    public BusinessHoursResponse saveHours(BusinessHoursRequest request, String providerEmail) {
+        Business business = requireBusiness(providerEmail);
         Set<DayOfWeek> seen = EnumSet.noneOf(DayOfWeek.class);
         for (DayHours day : request.days()) {
             if (day == null || day.dayOfWeek() == null || day.startTime() == null || day.endTime() == null) {

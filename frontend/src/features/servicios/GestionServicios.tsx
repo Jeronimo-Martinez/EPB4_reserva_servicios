@@ -45,7 +45,7 @@ export default function GestionServicios() {
       return;
     }
     try {
-      const data = await fetchProviderServices(providerEmail);
+      const data = await fetchProviderServices();
       const mapped = data.map(mapBackendToServicio);
       setServicios(mapped);
     } catch (err: unknown) {
@@ -71,7 +71,6 @@ export default function GestionServicios() {
     try {
       if (id) {
         const res = await updateService(id, {
-          providerEmail,
           name: form.nombre,
           category: form.categoria,
           description: form.descripcion,
@@ -86,7 +85,6 @@ export default function GestionServicios() {
         showNotification('success', `Servicio "${form.nombre}" actualizado.`);
       } else {
         const res = await createService({
-          providerEmail,
           name: form.nombre,
           category: form.categoria,
           description: form.descripcion,
@@ -114,7 +112,6 @@ export default function GestionServicios() {
 
     try {
       const res = await toggleServiceAvailability(id, {
-        providerEmail,
         available: !servicio.activo,
       });
       setServicios((prev) =>

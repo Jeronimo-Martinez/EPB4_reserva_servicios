@@ -115,8 +115,7 @@ function SummaryRows({ rows }: { rows: [string, string][] }) {
 }
 
 export default function ReservarCita() {
-  const { user, navigate, bookingService, openBusiness } = useAuth();
-  const clientEmail = user?.email || '';
+  const { navigate, bookingService, openBusiness } = useAuth();
   const today = dayKey(Date.now());
   const windowEnd = shift(today, WINDOW_DAYS - 1);
 
@@ -219,7 +218,7 @@ export default function ReservarCita() {
     setAlert(null);
     setBusy(true);
     try {
-      setReservation(await createHold(clientEmail, service.id, slot));
+      setReservation(await createHold(service.id, slot));
       goToStep('confirmacion');
     } catch (err: unknown) {
       const message = err instanceof ApiError ? err.message : 'No fue posible reservar el horario.';
@@ -242,7 +241,7 @@ export default function ReservarCita() {
     if (!reservation) return;
     setBusy(true);
     try {
-      setReservation(await confirmReservation(reservation.id, clientEmail));
+      setReservation(await confirmReservation(reservation.id));
       setAlert(null);
       goToStep('confirmada');
     } catch (err: unknown) {

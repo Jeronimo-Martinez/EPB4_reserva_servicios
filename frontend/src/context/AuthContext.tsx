@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import {
   User,
   LoginCredentials,
@@ -11,8 +11,9 @@ import {
   registerProviderApi,
   verifyCodeApi,
   resendCodeApi,
+  logoutApi,
 } from '@/api/auth';
-import { ApiError } from '@/api/client';
+import { ApiError, SESSION_ENDED_MESSAGE, SESSION_EXPIRED_EVENT, USER_STORAGE_KEY } from '@/api/client';
 import { Service } from '@/types/service';
 
 export type AppView =
@@ -61,7 +62,9 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const USER_STORAGE_KEY = 'promarket_auth_user';
+// Least privilege in the UI too (the backend enforces the same rule): each role only opens its own screens.
+const PROVIDER_VIEWS: AppView[] = ['servicios', 'horarios', 'agenda'];
+const CLIENT_VIEWS: AppView[] = ['reservas', 'reservar'];
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(() => {
@@ -72,6 +75,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return null;
     }
   });
+
+  // navigate() can run right after setUser() in the same handler, before the re-render; the ref is never stale.
+  const userRef = useRef(user);
+  userRef.current = user;
+  const signIn = (signedUser: User) => {
+    userRef.current = signedUser;
+    setUser(signedUser);
+  };
 
   const [currentView, setCurrentView] = useState<AppView>('landing');
   const [notification, setNotification] = useState<NotificationState | null>(null);
@@ -87,6 +98,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [user]);
 
+  useEffect(() => {
+    const onSessionExpired = () => {
+      setUser(null);
+      setCurrentView('login');
+      showNotification('info', SESSION_ENDED_MESSAGE);
+    };
+    window.addEventListener(SESSION_EXPIRED_EVENT, onSessionExpired);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onSessionExpired);
+    // showNotification only uses state setters, so the first one stays valid.
+  }, []);
+
   const showNotification = (type: 'success' | 'info' | 'error', message: string) => {
     setNotification({ type, message });
     setTimeout(() => {
@@ -97,6 +119,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const clearNotification = () => setNotification(null);
 
   const navigate = (view: AppView) => {
+    const role = userRef.current?.role;
+    if ((PROVIDER_VIEWS.includes(view) && role !== 'PROVEEDOR') || (CLIENT_VIEWS.includes(view) && role !== 'CLIENTE')) {
+      showNotification('error', 'No tienes permitido acceder a esta sección.');
+      return;
+    }
     setCurrentView(view);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -126,9 +153,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       firstName: res.email.split('@')[0],
       role: res.role,
       isVerified: true,
+      token: res.token,
     };
 
-    setUser(loggedUser);
+    signIn(loggedUser);
     showNotification('success', `¡Bienvenido de nuevo, ${loggedUser.firstName}!`);
 
     if (loggedUser.role === 'PROVEEDOR') {
@@ -139,6 +167,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
+    if (userRef.current?.token) {
+      // Best effort: the token is dropped locally even if the backend cannot be reached.
+      logoutApi().catch(() => undefined);
+    }
     setUser(null);
     showNotification('info', 'Has cerrado sesión con éxito.');
     navigate('landing');
@@ -156,8 +188,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       firstName: email.split('@')[0],
       role: res.role as User['role'],
       isVerified: true,
+      token: res.token,
     };
-    setUser(newUser);
+    signIn(newUser);
     return { role: res.role };
   };
 

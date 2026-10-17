@@ -21,19 +21,14 @@ export interface BusinessHoursResponse {
   days: DayHours[];
 }
 
-export async function fetchBusinessHours(providerEmail: string): Promise<BusinessHoursResponse> {
-  return request<BusinessHoursResponse>(
-    `/api/v1/schedule/hours?providerEmail=${encodeURIComponent(providerEmail)}`
-  );
+export async function fetchBusinessHours(): Promise<BusinessHoursResponse> {
+  return request<BusinessHoursResponse>('/api/v1/schedule/hours');
 }
 
-export async function saveBusinessHours(
-  providerEmail: string,
-  days: DayHours[]
-): Promise<BusinessHoursResponse> {
+export async function saveBusinessHours(days: DayHours[]): Promise<BusinessHoursResponse> {
   return request<BusinessHoursResponse>('/api/v1/schedule/hours', {
     method: 'PUT',
-    body: JSON.stringify({ providerEmail, days }),
+    body: JSON.stringify({ days }),
   });
 }
 
@@ -69,11 +64,7 @@ export interface AgendaResponse {
   days: AgendaDay[];
 }
 
-export async function fetchAgenda(
-  providerEmail: string,
-  view: AgendaView,
-  date: string
-): Promise<AgendaResponse> {
-  const params = new URLSearchParams({ providerEmail, view, date });
+export async function fetchAgenda(view: AgendaView, date: string): Promise<AgendaResponse> {
+  const params = new URLSearchParams({ view, date });
   return request<AgendaResponse>(`/api/v1/schedule/agenda?${params}`);
 }

@@ -7,6 +7,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.EBP4_back.reserva_servicios.entity.User;
+import com.EBP4_back.reserva_servicios.enums.UserRole;
+import com.EBP4_back.reserva_servicios.repository.UserRepository;
+import com.EBP4_back.reserva_servicios.security.SessionService;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
@@ -27,52 +31,56 @@ class ServiceCatalogControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+    @Autowired
+    private UserRepository users;
+    @Autowired
+    private SessionService sessions;
 
     @Test
     void createsServiceAndAppearsInProviderList() throws Exception {
-        MvcResult created = mockMvc.perform(post("/api/v1/services").contentType(MediaType.APPLICATION_JSON)
-                        .content(serviceBody(PROVIDER_EMAIL, "Servicio Test", 30, "45000.00", true)))
+        MvcResult created = mockMvc.perform(post("/api/v1/services").header("Authorization", bearer(PROVIDER_EMAIL)).contentType(MediaType.APPLICATION_JSON)
+                        .content(serviceBody("Servicio Test", 30, "45000.00", true)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.name").value("Servicio Test"))
                 .andExpect(jsonPath("$.available").value(true))
                 .andReturn();
         String id = extractId(created);
 
-        mockMvc.perform(get("/api/v1/services").param("providerEmail", PROVIDER_EMAIL))
+        mockMvc.perform(get("/api/v1/services").header("Authorization", bearer(PROVIDER_EMAIL)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[?(@.id=='" + id + "')].name").value("Servicio Test"));
     }
 
     @Test
     void rejectsEmptyNameInvalidDurationAndPrice() throws Exception {
-        mockMvc.perform(post("/api/v1/services").contentType(MediaType.APPLICATION_JSON)
-                        .content(serviceBody(PROVIDER_EMAIL, "", 30, "45000.00", true)))
+        mockMvc.perform(post("/api/v1/services").header("Authorization", bearer(PROVIDER_EMAIL)).contentType(MediaType.APPLICATION_JSON)
+                        .content(serviceBody("", 30, "45000.00", true)))
                 .andExpect(status().isBadRequest());
-        mockMvc.perform(post("/api/v1/services").contentType(MediaType.APPLICATION_JSON)
-                        .content(serviceBody(PROVIDER_EMAIL, "Zero Duration", 0, "45000.00", true)))
+        mockMvc.perform(post("/api/v1/services").header("Authorization", bearer(PROVIDER_EMAIL)).contentType(MediaType.APPLICATION_JSON)
+                        .content(serviceBody("Zero Duration", 0, "45000.00", true)))
                 .andExpect(status().isBadRequest());
-        mockMvc.perform(post("/api/v1/services").contentType(MediaType.APPLICATION_JSON)
-                        .content(serviceBody(PROVIDER_EMAIL, "Zero Price", 30, "0.00", true)))
+        mockMvc.perform(post("/api/v1/services").header("Authorization", bearer(PROVIDER_EMAIL)).contentType(MediaType.APPLICATION_JSON)
+                        .content(serviceBody("Zero Price", 30, "0.00", true)))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
     void updatesServiceAndTogglesAvailability() throws Exception {
-        MvcResult created = mockMvc.perform(post("/api/v1/services").contentType(MediaType.APPLICATION_JSON)
-                        .content(serviceBody(PROVIDER_EMAIL, "Antes", 30, "20000.00", true)))
+        MvcResult created = mockMvc.perform(post("/api/v1/services").header("Authorization", bearer(PROVIDER_EMAIL)).contentType(MediaType.APPLICATION_JSON)
+                        .content(serviceBody("Antes", 30, "20000.00", true)))
                 .andExpect(status().isCreated())
                 .andReturn();
         String id = extractId(created);
 
-        mockMvc.perform(put("/api/v1/services/" + id).contentType(MediaType.APPLICATION_JSON)
-                        .content(serviceBody(PROVIDER_EMAIL, "Despues", 45, "25000.00", true)))
+        mockMvc.perform(put("/api/v1/services/" + id).header("Authorization", bearer(PROVIDER_EMAIL)).contentType(MediaType.APPLICATION_JSON)
+                        .content(serviceBody("Despues", 45, "25000.00", true)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Despues"))
                 .andExpect(jsonPath("$.durationMinutes").value(45));
 
-        mockMvc.perform(patch("/api/v1/services/" + id + "/availability")
+        mockMvc.perform(patch("/api/v1/services/" + id + "/availability").header("Authorization", bearer(PROVIDER_EMAIL))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"providerEmail\":\"" + PROVIDER_EMAIL + "\",\"available\":false}"))
+                        .content("{\"available\":false}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.available").value(false));
     }
@@ -84,7 +92,9 @@ class ServiceCatalogControllerTest {
                 .andExpect(jsonPath("$[0].code").exists())
                 .andExpect(jsonPath("$[0].label").exists());
 
-        mockMvc.perform(get("/api/v1/services").param("providerEmail", "sin.servicios." + System.nanoTime() + "@example.com"))
+        User withoutServices = new User("Sin", "Servicios", "sin.servicios." + System.nanoTime() + "@example.com",
+                "+573001112233", "hash", UserRole.PROVEEDOR, true);
+        mockMvc.perform(get("/api/v1/services").header("Authorization", bearer(users.save(withoutServices).getEmail())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$.length()").value(0));
@@ -99,10 +109,14 @@ class ServiceCatalogControllerTest {
         return matcher.group(1);
     }
 
-    private String serviceBody(String email, String name, int duration, String price, boolean available) {
+    private String serviceBody(String name, int duration, String price, boolean available) {
         return """
-                {"providerEmail":"%s","name":"%s","category":"Belleza",
+                {"name":"%s","category":"Belleza",
                 "description":"Descripcion","durationMinutes":%d,"price":%s,"available":%s}
-                """.formatted(email, name, duration, price, available);
+                """.formatted(name, duration, price, available);
+    }
+
+    private String bearer(String email) {
+        return "Bearer " + sessions.open(users.findByEmailIgnoreCase(email).orElseThrow());
     }
 }

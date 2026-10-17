@@ -296,7 +296,7 @@ export default function AgendaNegocio() {
     }
     let current = true;
     setLoading(true);
-    fetchAgenda(providerEmail, view, date)
+    fetchAgenda(view, date)
       .then((res) => current && setAgenda(res))
       .catch((err: unknown) => {
         if (current) showNotification('error', err instanceof ApiError ? err.message : 'No se pudo cargar la agenda.');

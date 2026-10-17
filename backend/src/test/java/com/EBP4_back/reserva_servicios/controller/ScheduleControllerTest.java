@@ -14,6 +14,7 @@ import com.EBP4_back.reserva_servicios.enums.UserRole;
 import com.EBP4_back.reserva_servicios.repository.BusinessRepository;
 import com.EBP4_back.reserva_servicios.repository.ServiceOfferingRepository;
 import com.EBP4_back.reserva_servicios.repository.UserRepository;
+import com.EBP4_back.reserva_servicios.security.SessionService;
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -41,6 +42,8 @@ class ScheduleControllerTest {
     private MockMvc mockMvc;
     @Autowired
     private UserRepository users;
+    @Autowired
+    private SessionService sessions;
     @Autowired
     private BusinessRepository businesses;
     @Autowired
@@ -87,7 +90,9 @@ class ScheduleControllerTest {
                 .andExpect(status().isBadRequest());
 
         hours(provider).andExpect(jsonPath("$.days.length()").value(0));
-        hours("sin.negocio@example.com").andExpect(status().isNotFound());
+        User withoutBusiness = new User("Sin", "Negocio", "sin.negocio." + System.nanoTime() + "@example.com",
+                "+573001112233", "hash", UserRole.PROVEEDOR, true);
+        hours(users.save(withoutBusiness).getEmail()).andExpect(status().isNotFound());
     }
 
     @Test
@@ -99,8 +104,8 @@ class ScheduleControllerTest {
         LocalDate wednesday = LocalDate.now(Business.ZONE).with(TemporalAdjusters.next(DayOfWeek.WEDNESDAY)).plusWeeks(5);
         String client = newClient();
         String id = holdId(client, service, wednesday.atTime(10, 0).atZone(Business.ZONE).toInstant().toString());
-        mockMvc.perform(post("/api/v1/reservations/" + id + "/confirm").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"clientEmail\":\"" + client + "\"}")).andExpect(status().isOk());
+        mockMvc.perform(post("/api/v1/reservations/" + id + "/confirm").header("Authorization", bearer(client)))
+                .andExpect(status().isOk());
 
         agenda(provider, "SEMANA", wednesday)
                 .andExpect(status().isOk())
@@ -127,30 +132,30 @@ class ScheduleControllerTest {
                 .andExpect(jsonPath("$.from").value(wednesday.withDayOfMonth(1).toString()))
                 .andExpect(jsonPath("$.days.length()").value(wednesday.lengthOfMonth()));
 
-        mockMvc.perform(get("/api/v1/schedule/agenda").param("providerEmail", provider))
+        mockMvc.perform(get("/api/v1/schedule/agenda").header("Authorization", bearer(provider)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.view").value("DIA"))
                 .andExpect(jsonPath("$.from").value(LocalDate.now(Business.ZONE).toString()));
     }
 
     private ResultActions hours(String provider) throws Exception {
-        return mockMvc.perform(get("/api/v1/schedule/hours").param("providerEmail", provider));
+        return mockMvc.perform(get("/api/v1/schedule/hours").header("Authorization", bearer(provider)));
     }
 
     private ResultActions saveHours(String provider, String days) throws Exception {
-        return mockMvc.perform(put("/api/v1/schedule/hours").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"providerEmail\":\"" + provider + "\",\"days\":" + days + "}"));
+        return mockMvc.perform(put("/api/v1/schedule/hours").header("Authorization", bearer(provider))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"days\":" + days + "}"));
     }
 
     private ResultActions agenda(String provider, String view, LocalDate date) throws Exception {
-        return mockMvc.perform(get("/api/v1/schedule/agenda").param("providerEmail", provider)
+        return mockMvc.perform(get("/api/v1/schedule/agenda").header("Authorization", bearer(provider))
                 .param("view", view).param("date", date.toString()));
     }
 
     private String holdId(String client, ServiceOffering service, String startAt) throws Exception {
-        String body = mockMvc.perform(post("/api/v1/reservations/holds").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"clientEmail\":\"%s\",\"serviceId\":\"%s\",\"startAt\":\"%s\"}"
-                                .formatted(client, service.getId(), startAt)))
+        String body = mockMvc.perform(post("/api/v1/reservations/holds").header("Authorization", bearer(client))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"serviceId\":\"%s\",\"startAt\":\"%s\"}".formatted(service.getId(), startAt)))
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         Matcher matcher = ID_PATTERN.matcher(body);
         if (!matcher.find()) {
@@ -179,5 +184,9 @@ class ScheduleControllerTest {
                 "hash", UserRole.CLIENTE, true);
         user.verify();
         return users.save(user).getEmail();
+    }
+
+    private String bearer(String email) {
+        return "Bearer " + sessions.open(users.findByEmailIgnoreCase(email).orElseThrow());
     }
 }

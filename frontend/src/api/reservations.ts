@@ -16,21 +16,14 @@ export interface ReservationResponse {
 }
 
 /** Bloquea el horario por unos minutos mientras el cliente revisa y confirma. 409 si otro cliente ya lo tomó. */
-export async function createHold(
-  clientEmail: string,
-  serviceId: string,
-  startAt: string
-): Promise<ReservationResponse> {
+export async function createHold(serviceId: string, startAt: string): Promise<ReservationResponse> {
   return request<ReservationResponse>('/api/v1/reservations/holds', {
     method: 'POST',
-    body: JSON.stringify({ clientEmail, serviceId, startAt }),
+    body: JSON.stringify({ serviceId, startAt }),
   });
 }
 
 /** Convierte el bloqueo en reserva. 410 si el bloqueo ya expiró. */
-export async function confirmReservation(id: string, clientEmail: string): Promise<ReservationResponse> {
-  return request<ReservationResponse>(`/api/v1/reservations/${id}/confirm`, {
-    method: 'POST',
-    body: JSON.stringify({ clientEmail }),
-  });
+export async function confirmReservation(id: string): Promise<ReservationResponse> {
+  return request<ReservationResponse>(`/api/v1/reservations/${id}/confirm`, { method: 'POST' });
 }

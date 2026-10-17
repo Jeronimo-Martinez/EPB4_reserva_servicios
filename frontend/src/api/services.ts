@@ -20,7 +20,6 @@ export interface ServiceOfferingResponse {
 }
 
 export interface ServiceOfferingRequest {
-  providerEmail: string;
   name: string;
   category: string;
   description: string;
@@ -30,7 +29,6 @@ export interface ServiceOfferingRequest {
 }
 
 export interface AvailabilityRequest {
-  providerEmail: string;
   available: boolean;
 }
 
@@ -45,12 +43,9 @@ export async function fetchCatalogServices(
   return request<CatalogSearchResponse>(`/api/v1/catalog${qs ? `?${qs}` : ''}`);
 }
 
-export async function fetchProviderServices(
-  providerEmail: string
-): Promise<ServiceOfferingResponse[]> {
-  return request<ServiceOfferingResponse[]>(
-    `/api/v1/services?providerEmail=${encodeURIComponent(providerEmail)}`
-  );
+/** Services of the signed-in provider (the backend reads who it is from the session token). */
+export async function fetchProviderServices(): Promise<ServiceOfferingResponse[]> {
+  return request<ServiceOfferingResponse[]>('/api/v1/services');
 }
 
 export async function createService(

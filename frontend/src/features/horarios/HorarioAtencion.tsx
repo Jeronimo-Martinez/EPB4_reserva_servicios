@@ -79,7 +79,7 @@ export default function HorarioAtencion() {
       setLoading(false);
       return;
     }
-    fetchBusinessHours(providerEmail)
+    fetchBusinessHours()
       .then((res) => setSchedule(fromResponse(res.days)))
       .catch((err: unknown) => {
         showNotification('error', err instanceof ApiError ? err.message : 'No se pudo cargar el horario.');
@@ -110,7 +110,7 @@ export default function HorarioAtencion() {
         startTime: schedule[key].start,
         endTime: schedule[key].end,
       }));
-      const res = await saveBusinessHours(providerEmail, days);
+      const res = await saveBusinessHours(days);
       setSchedule(fromResponse(res.days));
       setAttempted(false);
       setSaved(true);

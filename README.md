@@ -64,6 +64,10 @@ Si al arrancar aparece `Read timed out` o `Connection reset`, la red bloquea el 
 
 En el plan gratuito el servicio se duerme tras unos 15 minutos sin uso y arrancar de nuevo tarda unos 2 minutos: ábrelo antes de una demo.
 
+## Autenticación y permisos
+
+El login y la verificación del registro devuelven un token de sesión (válido 12 horas, `app.session.hours`). Todas las rutas protegidas lo exigen en `Authorization: Bearer <token>`, y el backend identifica al usuario solo por ese token. Servicios, horarios y agenda son de `PROVEEDOR`; reservas de `CLIENTE`. Los accesos denegados quedan en el log `AUDIT` y, tras 5 intentos en 15 minutos, la cuenta se bloquea temporalmente.
+
 ## Validar el backend
 
 ```powershell

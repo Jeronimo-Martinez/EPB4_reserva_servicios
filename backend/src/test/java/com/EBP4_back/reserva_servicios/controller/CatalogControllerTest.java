@@ -14,6 +14,7 @@ import com.EBP4_back.reserva_servicios.enums.UserRole;
 import com.EBP4_back.reserva_servicios.repository.BusinessRepository;
 import com.EBP4_back.reserva_servicios.repository.ServiceOfferingRepository;
 import com.EBP4_back.reserva_servicios.repository.UserRepository;
+import com.EBP4_back.reserva_servicios.security.SessionService;
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -41,6 +42,8 @@ class CatalogControllerTest {
     private MockMvc mockMvc;
     @Autowired
     private UserRepository users;
+    @Autowired
+    private SessionService sessions;
     @Autowired
     private BusinessRepository businesses;
     @Autowired
@@ -205,9 +208,9 @@ class CatalogControllerTest {
         ServiceOffering service = services.save(service(newBusiness(true), "Masaje 60", true));
         LocalDate monday = LocalDate.now(Business.ZONE).with(TemporalAdjusters.next(DayOfWeek.MONDAY)).plusWeeks(2);
         // 60 min inside 09:00-12:00 every 30 min gives 09:00..11:00; a hold at 10:00 removes 09:30, 10:00 and 10:30.
-        mockMvc.perform(post("/api/v1/reservations/holds").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"clientEmail\":\"%s\",\"serviceId\":\"%s\",\"startAt\":\"%s\"}"
-                                .formatted(newClient(), service.getId(), at(monday, 10, 0))))
+        mockMvc.perform(post("/api/v1/reservations/holds").header("Authorization", bearer(newClient()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"serviceId\":\"%s\",\"startAt\":\"%s\"}".formatted(service.getId(), at(monday, 10, 0))))
                 .andExpect(status().isCreated());
 
         mockMvc.perform(get("/api/v1/catalog/" + service.getId() + "/availability")
@@ -251,5 +254,9 @@ class CatalogControllerTest {
                 "+573009998877", "hash", UserRole.CLIENTE, true);
         user.verify();
         return users.save(user).getEmail();
+    }
+
+    private String bearer(String email) {
+        return "Bearer " + sessions.open(users.findByEmailIgnoreCase(email).orElseThrow());
     }
 }

@@ -4,5 +4,6 @@ public record LoginResponse(
         String message,
         String email,
         String role,
-        String redirectTo) {
+        String redirectTo,
+        String token) {
 }

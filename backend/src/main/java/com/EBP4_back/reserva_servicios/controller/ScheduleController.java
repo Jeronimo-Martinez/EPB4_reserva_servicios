@@ -4,10 +4,12 @@ import com.EBP4_back.reserva_servicios.dto.AgendaResponse;
 import com.EBP4_back.reserva_servicios.dto.BusinessHoursRequest;
 import com.EBP4_back.reserva_servicios.dto.BusinessHoursResponse;
 import com.EBP4_back.reserva_servicios.enums.AgendaView;
+import com.EBP4_back.reserva_servicios.security.AuthUser;
 import com.EBP4_back.reserva_servicios.service.ScheduleService;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -25,19 +27,20 @@ public class ScheduleController {
     }
 
     @GetMapping("/hours")
-    public BusinessHoursResponse hours(@RequestParam("providerEmail") String providerEmail) {
-        return scheduleService.getHours(providerEmail);
+    public BusinessHoursResponse hours(@AuthenticationPrincipal AuthUser user) {
+        return scheduleService.getHours(user.email());
     }
 
     @PutMapping("/hours")
-    public BusinessHoursResponse saveHours(@Valid @RequestBody BusinessHoursRequest request) {
-        return scheduleService.saveHours(request);
+    public BusinessHoursResponse saveHours(@Valid @RequestBody BusinessHoursRequest request,
+            @AuthenticationPrincipal AuthUser user) {
+        return scheduleService.saveHours(request, user.email());
     }
 
     @GetMapping("/agenda")
-    public AgendaResponse agenda(@RequestParam("providerEmail") String providerEmail,
+    public AgendaResponse agenda(@AuthenticationPrincipal AuthUser user,
             @RequestParam(value = "view", defaultValue = "DIA") AgendaView view,
             @RequestParam(value = "date", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        return scheduleService.agenda(providerEmail, view, date);
+        return scheduleService.agenda(user.email(), view, date);
     }
 }

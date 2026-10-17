@@ -11,6 +11,7 @@ import com.EBP4_back.reserva_servicios.entity.User;
 import com.EBP4_back.reserva_servicios.enums.UserRole;
 import com.EBP4_back.reserva_servicios.repository.ServiceOfferingRepository;
 import com.EBP4_back.reserva_servicios.repository.UserRepository;
+import com.EBP4_back.reserva_servicios.security.SessionService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import java.time.DayOfWeek;
@@ -45,6 +46,8 @@ class ReservationControllerTest {
     @Autowired
     private UserRepository users;
     @Autowired
+    private SessionService sessions;
+    @Autowired
     private PlatformTransactionManager transactionManager;
     @PersistenceContext
     private EntityManager entityManager;
@@ -53,7 +56,7 @@ class ReservationControllerTest {
     void holdShowsSummaryAndConfirmCreatesReservation() throws Exception {
         String id = holdId(CLIENT, serviceId("Masaje Descontracturante"), slot(9));
 
-        mockMvc.perform(get("/api/v1/reservations/" + id).param("clientEmail", CLIENT))
+        mockMvc.perform(get("/api/v1/reservations/" + id).header("Authorization", bearer(CLIENT)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("PENDIENTE"))
                 .andExpect(jsonPath("$.businessName").value("Centro Vital"))
@@ -80,7 +83,7 @@ class ReservationControllerTest {
 
         // Going back and picking another service for the same slot must not collide with the own previous hold.
         holdId(CLIENT, serviceId("Corte de Cabello Clasico"), slot);
-        mockMvc.perform(get("/api/v1/reservations/" + first).param("clientEmail", CLIENT))
+        mockMvc.perform(get("/api/v1/reservations/" + first).header("Authorization", bearer(CLIENT)))
                 .andExpect(status().isNotFound());
     }
 
@@ -100,8 +103,9 @@ class ReservationControllerTest {
 
     @Test
     void rejectsIncompleteDataUnavailableServiceAndForeignClient() throws Exception {
-        mockMvc.perform(post("/api/v1/reservations/holds").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"clientEmail\":\"" + CLIENT + "\",\"serviceId\":\"" + serviceId("Masaje Descontracturante") + "\"}"))
+        mockMvc.perform(post("/api/v1/reservations/holds").header("Authorization", bearer(CLIENT))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"serviceId\":\"" + serviceId("Masaje Descontracturante") + "\"}"))
                 .andExpect(status().isBadRequest());
         hold(CLIENT, serviceId("Limpieza Facial Profunda"), slot(15)).andExpect(status().isConflict());
         // 17:30 + 60 min ends after the 18:00 closing time.
@@ -112,9 +116,9 @@ class ReservationControllerTest {
     }
 
     private ResultActions hold(String email, UUID serviceId, Instant startAt) throws Exception {
-        return mockMvc.perform(post("/api/v1/reservations/holds").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"clientEmail\":\"%s\",\"serviceId\":\"%s\",\"startAt\":\"%s\"}"
-                        .formatted(email, serviceId, startAt)));
+        return mockMvc.perform(post("/api/v1/reservations/holds").header("Authorization", bearer(email))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"serviceId\":\"%s\",\"startAt\":\"%s\"}".formatted(serviceId, startAt)));
     }
 
     private String holdId(String email, UUID serviceId, Instant startAt) throws Exception {
@@ -128,8 +132,7 @@ class ReservationControllerTest {
     }
 
     private ResultActions confirm(String id, String email) throws Exception {
-        return mockMvc.perform(post("/api/v1/reservations/" + id + "/confirm").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"clientEmail\":\"" + email + "\"}"));
+        return mockMvc.perform(post("/api/v1/reservations/" + id + "/confirm").header("Authorization", bearer(email)));
     }
 
     private UUID serviceId(String name) {
@@ -148,5 +151,9 @@ class ReservationControllerTest {
     private Instant slot(int hour) {
         return LocalDate.now(Business.ZONE).with(TemporalAdjusters.next(DayOfWeek.MONDAY)).plusWeeks(4)
                 .atTime(hour, 0).atZone(Business.ZONE).toInstant();
+    }
+
+    private String bearer(String email) {
+        return "Bearer " + sessions.open(users.findByEmailIgnoreCase(email).orElseThrow());
     }
 }
