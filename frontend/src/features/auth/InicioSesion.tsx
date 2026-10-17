@@ -18,6 +18,7 @@ export default function InicioSesion({ onRegistro }: { onRegistro?: () => void }
   const [globalError, setGlobalError] = useState('');
   const [loading, setLoading] = useState(false);
   const [attempts, setAttempts] = useState(0);
+  const [isBlocked, setIsBlocked] = useState(false);
   const [recoveryEmail, setRecoveryEmail] = useState('');
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [captchaError, setCaptchaError] = useState('');
@@ -80,6 +81,9 @@ export default function InicioSesion({ onRegistro }: { onRegistro?: () => void }
       resetCaptcha();
       if (err instanceof ApiError) {
         setGlobalError(err.message);
+        // 429 = bloqueo temporal por fuerza bruta: ofrecer recuperación de una vez.
+        if (err.status === 429) setIsBlocked(true);
+        else setIsBlocked(false);
       } else {
         setGlobalError(
           next >= 3
@@ -284,7 +288,7 @@ export default function InicioSesion({ onRegistro }: { onRegistro?: () => void }
               </svg>
               <div className="flex-1">
                 <p className="text-[#d94f41] text-[13px] leading-[20px]">{globalError}</p>
-                {attempts >= 3 && (
+                {(attempts >= 3 || isBlocked) && (
                   <button
                     type="button"
                     onClick={() => setScreen('recuperacion')}
@@ -307,6 +311,7 @@ export default function InicioSesion({ onRegistro }: { onRegistro?: () => void }
                 setEmail(v);
                 setEmailError('');
                 setGlobalError('');
+                setIsBlocked(false);
               }}
               error={emailError}
             />
@@ -331,6 +336,7 @@ export default function InicioSesion({ onRegistro }: { onRegistro?: () => void }
                     setPassword(e.target.value);
                     setPasswordError('');
                     setGlobalError('');
+                    setIsBlocked(false);
                   }}
                   className={`w-full border rounded-[8px] px-4 py-[10px] pr-11 text-[14px] bg-white outline-none transition-colors text-[#18211e]
                     ${passwordError || globalError ? 'border-[#d94f41]' : 'border-[#d4d9d3] focus:border-[#005146]'}`}

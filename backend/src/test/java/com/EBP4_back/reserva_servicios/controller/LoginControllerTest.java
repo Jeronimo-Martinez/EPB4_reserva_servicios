@@ -71,6 +71,34 @@ class LoginControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
+    @Test
+    void blocksAccountAfterFiveFailedAttempts() throws Exception {
+        String email = "bloqueo." + System.nanoTime() + "@example.com";
+        for (int i = 0; i < 5; i++) {
+            performLogin(email, "Incorrecta123")
+                    .andExpect(status().isUnauthorized());
+        }
+        performLogin(email, "Incorrecta123")
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.message").value(
+                        "Demasiados intentos fallidos. Tu acceso fue bloqueado temporalmente. Intenta de nuevo mas tarde"));
+    }
+
+    @Test
+    void otherAccountUnaffectedAfterBlock() throws Exception {
+        String email = "otracuenta." + System.nanoTime() + "@example.com";
+        for (int i = 0; i < 6; i++) {
+            performLogin(email, "Incorrecta123");
+        }
+        // Otra cuenta sigue entrando con credenciales correctas
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"cliente.demo@example.com","password":"Cliente123","recaptchaToken":"test-token"}
+                                """))
+                .andExpect(status().isOk());
+    }
+
     private org.springframework.test.web.servlet.ResultActions performLogin(String email, String password)
             throws Exception {
         return mockMvc.perform(post("/api/v1/auth/login")
