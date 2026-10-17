@@ -18,6 +18,9 @@ import { Service } from '@/types/service';
 export type AppView =
   | 'landing'
   | 'catalogo'
+  | 'negocio'
+  | 'disponibilidad'
+  | 'reserva'
   | 'reservas'
   | 'login'
   | 'registro-cliente'

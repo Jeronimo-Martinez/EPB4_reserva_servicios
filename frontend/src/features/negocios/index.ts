@@ -1,2 +1,1 @@
-export { default as ResultadosNegocios } from "./ResultadosNegocios";
-export { default as DetalleNegocio } from "./DetalleNegocio";
+export { default as DetalleNegocio } from './DetalleNegocio';
