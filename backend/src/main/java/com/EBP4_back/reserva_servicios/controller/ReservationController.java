@@ -5,6 +5,7 @@ import com.EBP4_back.reserva_servicios.dto.ReservationResponse;
 import com.EBP4_back.reserva_servicios.security.AuthUser;
 import com.EBP4_back.reserva_servicios.service.ReservationService;
 import jakarta.validation.Valid;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -30,6 +31,11 @@ public class ReservationController {
     public ReservationResponse hold(@Valid @RequestBody ReservationHoldRequest request,
             @AuthenticationPrincipal AuthUser user) {
         return reservationService.hold(request, user.email());
+    }
+
+    @GetMapping
+    public List<ReservationResponse> mine(@AuthenticationPrincipal AuthUser user) {
+        return reservationService.listOwn(user.id());
     }
 
     @GetMapping("/{id}")

@@ -62,7 +62,7 @@ frontend/
 - **El backend identifica al usuario solo por el token**: ninguna petición lleva `providerEmail` ni `clientEmail`, y los datos que el navegador envíe nunca deciden permisos.
 - Permisos por rol: catálogo, negocios, registro y login son públicos; servicios, horarios y agenda son solo para `PROVEEDOR`; reservas solo para `CLIENTE`. `navigate()` aplica la misma regla en la interfaz.
 - `401`: no hay sesión o ya no es válida. Si había un token guardado, la app cierra la sesión y muestra *"Tu sesión terminó. Inicia sesión de nuevo."*.
-- `403`: el recurso es de otro usuario (*"No tienes permitido acceder a esta información"* / *"…editar esta información"*) o la función es de otro rol. Cada intento queda en el log `AUDIT` del backend; con 5 intentos en 15 minutos se cierran las sesiones de la cuenta y queda bloqueada 15 minutos.
+- `403`: el recurso es de otro usuario (*"No tienes permitido acceder a esta información"* / *"…editar esta información"*) o la función es de otro rol. Cada intento queda en el log `AUDIT` del backend; con 5 intentos en 15 minutos se cierran las sesiones de la cuenta, queda bloqueada 15 minutos y el backend envía una alerta por correo al equipo de seguridad (`SECURITY_ALERT_EMAIL`).
 - `POST /api/v1/auth/logout` invalida el token en el backend (lo usa **Cerrar sesión**).
 
 Para las personas encargadas del backend, esta sección describe los endpoints y formatos de datos que el frontend consume actualmente o espera en las fases de integración:
@@ -261,6 +261,9 @@ Bloquea el horario por 10 minutos (botón **Continuar**). Responde `201` con la 
 
 #### `POST /api/v1/reservations/{id}/confirm`
 Confirma la reserva (botón **Confirmar reserva**), sin cuerpo. Responde `200` con `status: "CONFIRMADA"`; `410` si el bloqueo expiró (la pantalla vuelve a la selección de fecha y hora con un aviso) y `409` si ya estaba confirmada.
+
+#### Mis reservas — `GET /api/v1/reservations`
+Pantalla `src/features/reservas/MisReservas.tsx` (**Mis Reservas** en la barra del cliente o **Ver mis reservas** al confirmar). Lista solo las reservas `CONFIRMADA` del cliente con sesión, ordenadas por fecha; el backend lo identifica por el token, así que nunca devuelve reservas de otros clientes (HUS-29). Los bloqueos temporales no aparecen. La pantalla las separa en **Próximas citas** (aún no terminan) y **Citas pasadas** (la más reciente primero). Responde `200` con una lista de objetos como el de la confirmación (`message: null`), `401` sin sesión y `403` para proveedores.
 
 ---
 

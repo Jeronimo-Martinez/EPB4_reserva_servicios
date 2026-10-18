@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.EBP4_back.reserva_servicios.repository.VerificationCodeRepository;
+import com.EBP4_back.reserva_servicios.security.AccessAuditService;
 import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -25,7 +26,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 /** With BREVO_API_KEY set, verification codes leave through the Brevo API instead of SMTP. */
 @SpringBootTest(properties = {"app.mail.enabled=true", "app.mail.brevo-api-key=xkeysib-test",
-        "app.mail.from=remitente@example.com"})
+        "app.mail.from=remitente@example.com", "app.security.alert-email=seguridad@example.com"})
 @AutoConfigureMockMvc
 @ActiveProfiles("demo")
 class BrevoMailIntegrationTest {
@@ -61,6 +62,23 @@ class BrevoMailIntegrationTest {
     private MockMvc mockMvc;
     @Autowired
     private VerificationCodeRepository codes;
+    @Autowired
+    private AccessAuditService accessAudit;
+
+    @Test
+    void blockingAnAccountAlertsTheSecurityTeam() throws Exception {
+        String intruder = "intruso." + System.nanoTime() + "@example.com";
+        for (int attempt = 0; attempt < 5; attempt++) {
+            accessAudit.deny(intruder, "VER_RESERVA", "reserva 123", AccessAuditService.NOT_ALLOWED_VIEW);
+        }
+        // The alert leaves asynchronously.
+        for (int wait = 0; wait < 50 && SENT.stream().noneMatch(json -> json.contains(intruder)); wait++) {
+            Thread.sleep(100);
+        }
+        assertTrue(SENT.stream().anyMatch(json -> json.contains("\"email\":\"seguridad@example.com\"")
+                        && json.contains(intruder) && json.contains("VER_RESERVA sobre reserva 123")),
+                "Brevo no recibio la alerta por " + intruder + ": " + SENT);
+    }
 
     @Test
     void registrationSendsTheVerificationCodeThroughBrevo() throws Exception {

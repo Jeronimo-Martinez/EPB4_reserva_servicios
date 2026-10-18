@@ -70,7 +70,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(() => {
     try {
       const stored = localStorage.getItem(USER_STORAGE_KEY);
-      return stored ? JSON.parse(stored) : null;
+      const saved: User | null = stored ? JSON.parse(stored) : null;
+      // A session saved without a token (before HA-29) cannot call the backend: ask to log in again.
+      return saved?.token ? saved : null;
     } catch {
       return null;
     }

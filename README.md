@@ -57,6 +57,7 @@ Si al arrancar aparece `Read timed out` o `Connection reset`, la red bloquea el 
    | `APP_MAIL_ENABLED` | `true` para enviar correos; con `false` los códigos solo aparecen en los logs |
    | `BREVO_API_KEY` | API key de Brevo (ver abajo). Render gratuito bloquea SMTP, así que allí el correo sale por esta API |
    | `MAIL_FROM` | Correo remitente verificado en Brevo |
+   | `SECURITY_ALERT_EMAIL` | Correo del equipo que recibe las alertas de seguridad (cuentas bloqueadas por intentos de acceso no autorizado). Sin valor, la alerta solo queda en los logs |
 
    **Correo con Brevo (gratis, unos 300 correos al día):** crea una cuenta en [brevo.com](https://www.brevo.com), verifica tu correo como remitente en **Senders, Domains & Dedicated IPs → Senders**, y crea la clave en **SMTP & API → API Keys** (es la que empieza por `xkeysib-`, no la de SMTP). Sin dominio propio Brevo puede mostrar otra dirección como remitente y algunos correos pueden llegar a spam. En local puedes seguir usando Gmail por SMTP (ver `backend/.env.example`).
 
@@ -66,7 +67,7 @@ En el plan gratuito el servicio se duerme tras unos 15 minutos sin uso y arranca
 
 ## Autenticación y permisos
 
-El login y la verificación del registro devuelven un token de sesión (válido 12 horas, `app.session.hours`). Todas las rutas protegidas lo exigen en `Authorization: Bearer <token>`, y el backend identifica al usuario solo por ese token. Servicios, horarios y agenda son de `PROVEEDOR`; reservas de `CLIENTE`. Los accesos denegados quedan en el log `AUDIT` y, tras 5 intentos en 15 minutos, la cuenta se bloquea temporalmente.
+El login y la verificación del registro devuelven un token de sesión (válido 12 horas, `app.session.hours`). Todas las rutas protegidas lo exigen en `Authorization: Bearer <token>`, y el backend identifica al usuario solo por ese token. Servicios, horarios y agenda son de `PROVEEDOR`; reservas de `CLIENTE`. Los accesos denegados quedan en el log `AUDIT` y, tras 5 intentos en 15 minutos, la cuenta se bloquea temporalmente y se envía una alerta por correo a `SECURITY_ALERT_EMAIL`.
 
 ## Validar el backend
 

@@ -116,6 +116,34 @@ class AccessControlTest {
     }
 
     @Test
+    void myReservationsListsOnlyTheClientsOwnConfirmedReservations() throws Exception {
+        User provider = newUser(UserRole.PROVEEDOR);
+        ServiceOffering service = newService(newBusiness(provider));
+        User client = newUser(UserRole.CLIENTE);
+        User other = newUser(UserRole.CLIENTE);
+        String later = holdId(client, service, 14);
+        confirm(later, client);
+        String earlier = holdId(client, service, 9);
+        confirm(earlier, client);
+        confirm(holdId(other, service, 11), other);
+        holdId(client, service, 16); // a pending hold is not a reservation yet
+
+        mockMvc.perform(get("/api/v1/reservations").header("Authorization", bearer(client)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].id").value(earlier))
+                .andExpect(jsonPath("$[1].id").value(later))
+                .andExpect(jsonPath("$[0].status").value("CONFIRMADA"))
+                .andExpect(jsonPath("$[0].businessName").value("Negocio " + provider.getEmail()))
+                .andExpect(jsonPath("$[0].serviceName").value("Servicio Privado"));
+        mockMvc.perform(get("/api/v1/reservations").header("Authorization", bearer(newUser(UserRole.CLIENTE))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+        mockMvc.perform(get("/api/v1/reservations").header("Authorization", bearer(provider))).andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/v1/reservations")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void providerOnlyManagesAndSeesItsOwnBusiness() throws Exception {
         User providerA = newUser(UserRole.PROVEEDOR);
         User providerB = newUser(UserRole.PROVEEDOR);
@@ -210,6 +238,11 @@ class AccessControlTest {
 
     private LocalDate mondayIn(int weeks) {
         return LocalDate.now(Business.ZONE).with(TemporalAdjusters.next(DayOfWeek.MONDAY)).plusWeeks(weeks);
+    }
+
+    private void confirm(String id, User client) throws Exception {
+        mockMvc.perform(post("/api/v1/reservations/" + id + "/confirm").header("Authorization", bearer(client)))
+                .andExpect(status().isOk());
     }
 
     private String holdId(User client, ServiceOffering service, int hour) throws Exception {
