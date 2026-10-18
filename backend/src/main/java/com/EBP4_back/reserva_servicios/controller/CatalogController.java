@@ -5,6 +5,7 @@ import com.EBP4_back.reserva_servicios.dto.BusinessDetailResponse;
 import com.EBP4_back.reserva_servicios.dto.CatalogSearchResponse;
 import com.EBP4_back.reserva_servicios.dto.CatalogServiceResponse;
 import com.EBP4_back.reserva_servicios.dto.CategoryResponse;
+import com.EBP4_back.reserva_servicios.dto.CategoryStatResponse;
 import com.EBP4_back.reserva_servicios.service.CatalogService;
 import com.EBP4_back.reserva_servicios.service.ServiceCatalogService;
 import java.time.LocalDate;
@@ -60,5 +61,10 @@ public class CatalogController {
     @GetMapping("/categories")
     public List<CategoryResponse> categories() {
         return serviceCatalogService.listCategories();
+    }
+
+    @GetMapping("/category-stats")
+    public List<CategoryStatResponse> categoryStats() {
+        return catalogService.categoryStats();
     }
 }

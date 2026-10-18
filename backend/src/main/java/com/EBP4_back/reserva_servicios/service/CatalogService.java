@@ -4,11 +4,13 @@ import com.EBP4_back.reserva_servicios.dto.AvailabilityResponse;
 import com.EBP4_back.reserva_servicios.dto.BusinessDetailResponse;
 import com.EBP4_back.reserva_servicios.dto.CatalogSearchResponse;
 import com.EBP4_back.reserva_servicios.dto.CatalogServiceResponse;
+import com.EBP4_back.reserva_servicios.dto.CategoryStatResponse;
 import com.EBP4_back.reserva_servicios.entity.Business;
 import com.EBP4_back.reserva_servicios.entity.BusinessHours;
 import com.EBP4_back.reserva_servicios.entity.Reservation;
 import com.EBP4_back.reserva_servicios.entity.ServiceOffering;
 import com.EBP4_back.reserva_servicios.enums.ReservationStatus;
+import com.EBP4_back.reserva_servicios.enums.ServiceCategory;
 import com.EBP4_back.reserva_servicios.repository.BusinessRepository;
 import com.EBP4_back.reserva_servicios.repository.ReservationRepository;
 import com.EBP4_back.reserva_servicios.repository.ServiceOfferingRepository;
@@ -19,10 +21,13 @@ import java.time.LocalDate;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -55,6 +60,18 @@ public class CatalogService {
                 .map(this::toResponse)
                 .toList();
         return new CatalogSearchResponse(items, items.size(), normalizedSearch, normalizedCategory);
+    }
+
+    @Transactional(readOnly = true)
+    public List<CategoryStatResponse> categoryStats() {
+        Map<String, Long> counts = new HashMap<>();
+        for (Object[] row : serviceRepository.countAvailableByCategory()) {
+            counts.put((String) row[0], (Long) row[1]);
+        }
+        return Stream.of(ServiceCategory.values())
+                .map(cat -> new CategoryStatResponse(cat.name(), cat.getLabel(),
+                        counts.getOrDefault(cat.getLabel().toLowerCase(), 0L)))
+                .toList();
     }
 
     @Transactional(readOnly = true)

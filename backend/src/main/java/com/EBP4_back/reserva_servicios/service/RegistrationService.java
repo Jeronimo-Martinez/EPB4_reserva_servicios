@@ -20,6 +20,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -93,9 +94,15 @@ public class RegistrationService {
         }
         code.markUsed();
         user.verify();
+        // El negocio solo aplica a proveedores; para clientes queda vacio.
+        Optional<Business> business = user.getRole() == UserRole.PROVEEDOR
+                ? businessRepository.findByUserEmailIgnoreCase(user.getEmail())
+                : Optional.empty();
         // Verifying the code proves the mailbox, so the user leaves this step already signed in.
         return new VerificationResponse("Registro verificado exitosamente", user.getEmail(), user.getRole().name(),
-                sessionService.open(user));
+                sessionService.open(user), user.getFirstName(), user.getLastName(),
+                business.map(Business::getName).orElse(null),
+                business.map(Business::getCategory).orElse(null));
     }
 
     @Transactional

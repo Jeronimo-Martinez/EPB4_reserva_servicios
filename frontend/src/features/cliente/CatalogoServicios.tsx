@@ -20,10 +20,12 @@ const CATEGORIES: ServiceCategory[] = [
 ];
 
 export default function CatalogoServicios() {
-  const { user, navigate, openBusiness } = useAuth();
+  const { user, navigate, openBusiness, catalogCategory } = useAuth();
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState<ServiceCategory>('Todas');
+  const [selectedCategory, setSelectedCategory] = useState<ServiceCategory>(
+    (catalogCategory as ServiceCategory) || 'Todas'
+  );
   const [searchQuery, setSearchQuery] = useState('');
   const [bookingService, setBookingService] = useState<Service | null>(null);
 

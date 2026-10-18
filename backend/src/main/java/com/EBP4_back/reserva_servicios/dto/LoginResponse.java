@@ -5,5 +5,9 @@ public record LoginResponse(
         String email,
         String role,
         String redirectTo,
-        String token) {
+        String token,
+        String firstName,
+        String lastName,
+        String businessName,
+        String businessCategory) {
 }

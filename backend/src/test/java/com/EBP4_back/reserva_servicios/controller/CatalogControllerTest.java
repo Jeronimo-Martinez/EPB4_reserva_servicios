@@ -149,6 +149,33 @@ class CatalogControllerTest {
     }
 
     @Test
+    void categoryStatsReturnsRealCountsPerCategory() throws Exception {
+        Business business = newBusiness(true);
+        services.save(new ServiceOffering(business, "Tratamiento Stats", "Salud y Bienestar", "Desc", 60,
+                new BigDecimal("50000.00"), true));
+        services.save(new ServiceOffering(business, "Corte Stats", "Belleza", "Desc", 45,
+                new BigDecimal("30000.00"), true));
+        services.save(new ServiceOffering(business, "Pausado Stats", "Belleza", "Desc", 30,
+                new BigDecimal("20000.00"), false));
+
+        mockMvc.perform(get("/api/v1/catalog/category-stats"))
+                .andExpect(status().isOk())
+                // All 7 enum categories are always present.
+                .andExpect(jsonPath("$.length()").value(7))
+                .andExpect(jsonPath("$[0].code").value("SALUD_Y_BIENESTAR"))
+                .andExpect(jsonPath("$[0].label").value("Salud y Bienestar"))
+                .andExpect(jsonPath("$[1].code").value("BELLEZA"))
+                .andExpect(jsonPath("$[1].label").value("Belleza"))
+                // Seeded data: 1 active Masaje Descontracturante (Salud y Bienestar)
+                // + 1 new Tratamiento Stats = 2; Corte de Cabello Clasico + Corte Stats = 2 active Belleza;
+                // Limpieza Facial Profunda is inactive so not counted.
+                .andExpect(jsonPath("$[0].serviceCount").value(2))
+                .andExpect(jsonPath("$[1].serviceCount").value(2))
+                .andExpect(jsonPath("$[6].code").value("OTROS"))
+                .andExpect(jsonPath("$[6].serviceCount").value(0));
+    }
+
+    @Test
     void businessDetailShowsContactInfoAndServicesWithBookableFlag() throws Exception {
         Business business = newBusiness(true);
         services.save(service(business, "Corte Activo", true));

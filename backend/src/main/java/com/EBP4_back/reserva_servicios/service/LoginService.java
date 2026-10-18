@@ -2,11 +2,15 @@ package com.EBP4_back.reserva_servicios.service;
 
 import com.EBP4_back.reserva_servicios.dto.LoginRequest;
 import com.EBP4_back.reserva_servicios.dto.LoginResponse;
+import com.EBP4_back.reserva_servicios.entity.Business;
 import com.EBP4_back.reserva_servicios.entity.User;
+import com.EBP4_back.reserva_servicios.enums.UserRole;
+import com.EBP4_back.reserva_servicios.repository.BusinessRepository;
 import com.EBP4_back.reserva_servicios.repository.UserRepository;
 import com.EBP4_back.reserva_servicios.security.AccessAuditService;
 import com.EBP4_back.reserva_servicios.security.SessionService;
 import java.util.Locale;
+import java.util.Optional;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -23,10 +27,12 @@ public class LoginService {
     private final SuspiciousLoginNotifier loginNotifier;
     private final SessionService sessionService;
     private final AccessAuditService accessAudit;
+    private final BusinessRepository businessRepository;
 
     public LoginService(UserRepository userRepository, PasswordEncoder passwordEncoder,
             RecaptchaValidator recaptchaValidator, LoginAttemptService attemptService,
-            SuspiciousLoginNotifier loginNotifier, SessionService sessionService, AccessAuditService accessAudit) {
+            SuspiciousLoginNotifier loginNotifier, SessionService sessionService, AccessAuditService accessAudit,
+            BusinessRepository businessRepository) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.recaptchaValidator = recaptchaValidator;
@@ -34,6 +40,7 @@ public class LoginService {
         this.loginNotifier = loginNotifier;
         this.sessionService = sessionService;
         this.accessAudit = accessAudit;
+        this.businessRepository = businessRepository;
     }
 
     @Transactional
@@ -63,8 +70,14 @@ public class LoginService {
         User found = user.get();
         String role = found.getRole().name();
         String redirectTo = "PROVEEDOR".equals(role) ? "/proveedor" : "/cliente";
+        // El negocio solo aplica a proveedores; para clientes queda vacio.
+        Optional<Business> business = found.getRole() == UserRole.PROVEEDOR
+                ? businessRepository.findByUserEmailIgnoreCase(found.getEmail())
+                : Optional.empty();
         return new LoginResponse("Inicio de sesion exitoso", found.getEmail(), role, redirectTo,
-                sessionService.open(found));
+                sessionService.open(found), found.getFirstName(), found.getLastName(),
+                business.map(Business::getName).orElse(null),
+                business.map(Business::getCategory).orElse(null));
     }
 
     private ResponseStatusException invalidCredentials() {

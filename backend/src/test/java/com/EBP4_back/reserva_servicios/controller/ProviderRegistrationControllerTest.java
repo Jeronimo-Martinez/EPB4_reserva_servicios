@@ -42,7 +42,11 @@ class ProviderRegistrationControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"email\":\"" + email + "\",\"code\":\"" + code + "\"}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.role").value("PROVEEDOR"));
+                .andExpect(jsonPath("$.role").value("PROVEEDOR"))
+                .andExpect(jsonPath("$.firstName").value("Jero"))
+                .andExpect(jsonPath("$.lastName").value("Martinez"))
+                .andExpect(jsonPath("$.businessName").value("Centro Test"))
+                .andExpect(jsonPath("$.businessCategory").value("Salud y Bienestar"));
 
         assert businesses.existsByUserEmailIgnoreCase(email);
     }

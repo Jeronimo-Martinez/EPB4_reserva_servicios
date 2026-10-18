@@ -273,25 +273,13 @@ export default function RegistroProveedor() {
               <strong className="text-[#18211e]">{contacto.email}</strong>
             </p>
 
-            <button
-              type="button"
-              onClick={() => {
-                setVerificationCode('123456');
-                setVerificationError('');
-              }}
-              className="mb-5 inline-flex items-center gap-1.5 px-3 py-1 bg-[#e6f0ef] hover:bg-[#d5e7e5] text-[#005146] text-[12px] font-medium rounded-full cursor-pointer transition-colors border border-[#b8d4d1]"
-            >
-              <span>Usar código de prueba:</span>
-              <strong className="font-mono">123456</strong>
-            </button>
-
             <form onSubmit={handleVerify} className="w-full flex flex-col gap-4">
               <div className="flex flex-col gap-1 text-left">
                 <label className="text-[#18211e] text-[14px] font-medium">Código de 6 dígitos</label>
                 <input
                   type="text"
                   maxLength={6}
-                  placeholder="123456"
+                  placeholder="XXXXXX"
                   value={verificationCode}
                   onChange={(e) => {
                     setVerificationCode(e.target.value);
@@ -387,7 +375,7 @@ export default function RegistroProveedor() {
                 <InputField
                   label="Correo electrónico de acceso"
                   type="email"
-                  placeholder="contacto@centrovital.com"
+                  placeholder="tu@negocio.com"
                   value={contacto.email}
                   onChange={(v) => {
                     setContacto({ ...contacto, email: v });

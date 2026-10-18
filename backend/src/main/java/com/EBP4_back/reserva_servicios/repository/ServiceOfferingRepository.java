@@ -23,4 +23,13 @@ public interface ServiceOfferingRepository extends JpaRepository<ServiceOffering
             ORDER BY s.createdAt DESC
             """)
     List<ServiceOffering> searchCatalog(@Param("search") String search, @Param("category") String category);
+
+    // Counts active services grouped by category (lowercased) for the landing page stats.
+    @Query("""
+            SELECT LOWER(s.category) AS cat, COUNT(s) AS cnt
+            FROM ServiceOffering s
+            WHERE s.available = true
+            GROUP BY LOWER(s.category)
+            """)
+    List<Object[]> countAvailableByCategory();
 }

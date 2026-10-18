@@ -58,6 +58,9 @@ interface AuthContextType {
   selectedBusinessId: string | null;
   businessReturnView: AppView;
   openBusiness: (businessId: string) => void;
+  /** Categoría preseleccionada al abrir el catálogo desde la landing. */
+  catalogCategory: string | null;
+  openCatalog: (category?: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -91,6 +94,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [bookingService, setBookingService] = useState<Service | null>(null);
   const [selectedBusinessId, setSelectedBusinessId] = useState<string | null>(null);
   const [businessReturnView, setBusinessReturnView] = useState<AppView>('negocios');
+  const [catalogCategory, setCatalogCategory] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -147,13 +151,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     navigate('negocio');
   };
 
+  const openCatalog = (category?: string) => {
+    setCatalogCategory(category || null);
+    navigate('catalogo');
+  };
+
   const login = async (credentials: LoginCredentials) => {
     const res = await loginApi(credentials);
     const loggedUser: User = {
       id: `user-${res.email}`,
       email: res.email,
-      firstName: res.email.split('@')[0],
+      firstName: res.firstName || res.email.split('@')[0],
+      lastName: res.lastName,
       role: res.role,
+      businessName: res.businessName,
+      businessCategory: res.businessCategory,
       isVerified: true,
       token: res.token,
     };
@@ -187,8 +199,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const newUser: User = {
       id: `user-${res.email}`,
       email: res.email,
-      firstName: email.split('@')[0],
+      firstName: res.firstName || email.split('@')[0],
+      lastName: res.lastName,
       role: res.role as User['role'],
+      businessName: res.businessName,
+      businessCategory: res.businessCategory,
       isVerified: true,
       token: res.token,
     };
@@ -231,6 +246,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         selectedBusinessId,
         businessReturnView,
         openBusiness,
+        catalogCategory,
+        openCatalog,
       }}
     >
       {children}

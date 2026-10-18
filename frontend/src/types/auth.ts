@@ -26,6 +26,11 @@ export interface LoginResponse {
   role: UserRole;
   redirectTo: string;
   token: string;
+  firstName: string;
+  lastName?: string;
+  /** Solo presentes para rol PROVEEDOR; vacíos/ausentes para clientes. */
+  businessName?: string;
+  businessCategory?: string;
 }
 
 export interface RegisterClientDTO {
@@ -54,6 +59,10 @@ export interface VerifyCodeResponse {
   email: string;
   role: UserRole;
   token: string;
+  firstName: string;
+  lastName?: string;
+  businessName?: string;
+  businessCategory?: string;
 }
 
 export interface ResendCodeDTO {
