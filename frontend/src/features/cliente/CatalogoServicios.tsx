@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { NavBar } from '@/components/layout';
-import { EmptyState } from '@/components/ui';
+import { EmptyState, RatingBadge } from '@/components/ui';
 import { useAuth } from '@/context/AuthContext';
-import { useBooking } from '@/context/BookingContext';
 import { Service, ServiceCategory } from '@/types/service';
 import { fetchCatalogServices } from '@/api/services';
 import { ApiError } from '@/api/client';
+import { IniciarReservaModal } from '@/features/reservas';
+import { categoryLabel } from '@/features/servicios/types';
 
 const CATEGORIES: ServiceCategory[] = [
   'Todas',
@@ -23,13 +24,12 @@ interface CatalogoServiciosProps {
 }
 
 export default function CatalogoServicios({ initialView = 'catalogo' }: CatalogoServiciosProps) {
-  const { user, navigate, showNotification } = useAuth();
-  const { setSelectedServiceForBooking } = useBooking();
+  const { user, navigate, openBusiness } = useAuth();
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<ServiceCategory>('Todas');
   const [searchQuery, setSearchQuery] = useState('');
-
+  const [bookingService, setBookingService] = useState<Service | null>(null);
 
   useEffect(() => {
     loadServices();
@@ -56,19 +56,6 @@ export default function CatalogoServicios({ initialView = 'catalogo' }: Catalogo
       (srv.businessName && srv.businessName.toLowerCase().includes(searchQuery.toLowerCase()));
     return matchesCategory && matchesQuery;
   });
-
-  const handleOpenBooking = (service: Service) => {
-    setSelectedServiceForBooking({
-      id: service.id,
-      nombre: service.name,
-      duracion: `${service.durationMinutes} min`,
-      duracionMin: service.durationMinutes,
-      precio: service.price,
-      precioStr: `$${service.price.toLocaleString('es-CO')}`,
-      origen: 'catalogo',
-    });
-    navigate('disponibilidad');
-  };
 
   const isReservasView = initialView === 'reservas';
 
@@ -253,22 +240,27 @@ export default function CatalogoServicios({ initialView = 'catalogo' }: Catalogo
                       <div>
                         <div className="flex items-start justify-between gap-3 mb-2">
                           <span className="text-[12px] font-semibold text-[#005146] bg-[#e6f0ef] px-2.5 py-1 rounded-full border border-[#b8d4d1]">
-                            {srv.category}
+                            {categoryLabel(srv.category)}
                           </span>
-                          {srv.averageRating != null && srv.averageRating > 0 && (
-                            <div className="flex items-center gap-1 text-[13px] font-semibold text-[#18211e]">
-                              <span className="text-amber-500">★</span>
-                              <span>{srv.averageRating.toFixed(1)}</span>
-                              <span className="text-[#66716c] text-[12px]">({srv.reviewCount})</span>
-                            </div>
-                          )}
+                          <RatingBadge average={srv.averageRating ?? 0} count={srv.reviewCount ?? 0} />
                         </div>
 
                         <h3 className="text-[18px] font-bold text-[#18211e] leading-snug mt-2">
                           {srv.name}
                         </h3>
                         <p className="text-[13px] font-medium text-[#66716c] mt-0.5">
-                          Por: <strong className="text-[#18211e]">{srv.businessName || 'Profesional certificado'}</strong>
+                          Por:{' '}
+                          {srv.businessId ? (
+                            <button
+                              type="button"
+                              onClick={() => openBusiness(srv.businessId!)}
+                              className="font-bold text-[#18211e] hover:text-[#005146] underline-offset-2 hover:underline cursor-pointer bg-transparent"
+                            >
+                              {srv.businessName}
+                            </button>
+                          ) : (
+                            <strong className="text-[#18211e]">{srv.businessName || 'Profesional certificado'}</strong>
+                          )}
                         </p>
 
                         <p className="text-[#66716c] text-[14px] leading-relaxed mt-3 line-clamp-3">
@@ -295,7 +287,7 @@ export default function CatalogoServicios({ initialView = 'catalogo' }: Catalogo
 
                         <button
                           type="button"
-                          onClick={() => handleOpenBooking(srv)}
+                          onClick={() => setBookingService(srv)}
                           disabled={!srv.available}
                           className={`w-full py-2.5 rounded-[8px] text-[14px] font-semibold transition-all duration-150 flex items-center justify-center gap-2 active:scale-95
                             ${
@@ -340,6 +332,8 @@ export default function CatalogoServicios({ initialView = 'catalogo' }: Catalogo
           </div>
         )}
       </main>
+
+      {bookingService && <IniciarReservaModal service={bookingService} onClose={() => setBookingService(null)} />}
     </div>
   );
 }

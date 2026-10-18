@@ -34,6 +34,7 @@ export default function SelectField({
       </label>
       <div className="relative">
         <select
+          aria-label={label}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           className={`w-full appearance-none border rounded-[8px] px-4 py-[10px] text-[14px] bg-white outline-none transition-colors pr-9

@@ -1,1 +1,2 @@
-export { default as ReservaCita } from './ReservaCita';
+export { default as ReservarCita } from "./ReservarCita";
+export { default as IniciarReservaModal } from "./IniciarReservaModal";

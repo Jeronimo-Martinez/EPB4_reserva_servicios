@@ -1,1 +1,1 @@
-export { default as HorarioDisponibilidad } from './HorarioDisponibilidad';
+export { default as HorarioAtencion } from "./HorarioAtencion";

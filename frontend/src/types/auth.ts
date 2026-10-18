@@ -10,6 +10,8 @@ export interface User {
   businessName?: string;
   businessCategory?: string;
   isVerified: boolean;
+  /** Session token from the backend; it, not the email, identifies the user in every request. */
+  token?: string;
 }
 
 export interface LoginCredentials {
@@ -23,6 +25,7 @@ export interface LoginResponse {
   email: string;
   role: UserRole;
   redirectTo: string;
+  token: string;
 }
 
 export interface RegisterClientDTO {
@@ -50,6 +53,7 @@ export interface VerifyCodeResponse {
   message: string;
   email: string;
   role: UserRole;
+  token: string;
 }
 
 export interface ResendCodeDTO {

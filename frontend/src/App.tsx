@@ -1,16 +1,14 @@
 import React from 'react';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
-import { BookingProvider } from '@/context/BookingContext';
 import Landing from '@/pages/Landing';
 import { CatalogoServicios } from '@/features/cliente';
 import { InicioSesion, RegistroCliente, RegistroProveedor } from '@/features/auth';
 import { GestionServicios } from '@/features/servicios';
+import { HorarioAtencion } from '@/features/horarios';
+import { AgendaNegocio } from '@/features/agenda';
+import { ReservarCita } from '@/features/reservas';
+import { DetalleNegocio, ResultadosNegocios } from '@/features/negocios';
 import { PerfilUsuario } from '@/features/perfil';
-import { HorarioDisponibilidad } from '@/features/horarios';
-import { AgendaProveedor } from '@/features/agenda';
-import { DetalleNegocio } from '@/features/negocios';
-import { DisponibilidadServicio } from '@/features/disponibilidad';
-import { ReservaCita } from '@/features/reservas';
 
 function MainRouter() {
   const { currentView, notification, clearNotification } = useAuth();
@@ -18,26 +16,27 @@ function MainRouter() {
   const renderCurrentView = () => {
     switch (currentView) {
       case 'catalogo':
+        return <CatalogoServicios initialView="catalogo" />;
       case 'reservas':
-        return <CatalogoServicios />;
-      case 'negocio':
-        return <DetalleNegocio />;
-      case 'disponibilidad':
-        return <DisponibilidadServicio />;
-      case 'reserva':
-        return <ReservaCita />;
-      case 'servicios':
-        return <GestionServicios />;
-      case 'horarios':
-        return <HorarioDisponibilidad />;
-      case 'agenda':
-        return <AgendaProveedor />;
+        return <CatalogoServicios initialView="reservas" />;
       case 'login':
         return <InicioSesion />;
       case 'registro-cliente':
         return <RegistroCliente />;
       case 'registro-proveedor':
         return <RegistroProveedor />;
+      case 'servicios':
+        return <GestionServicios />;
+      case 'horarios':
+        return <HorarioAtencion />;
+      case 'agenda':
+        return <AgendaNegocio />;
+      case 'reservar':
+        return <ReservarCita />;
+      case 'negocios':
+        return <ResultadosNegocios />;
+      case 'negocio':
+        return <DetalleNegocio />;
       case 'perfil':
         return <PerfilUsuario />;
       case 'landing':
@@ -96,9 +95,7 @@ function MainRouter() {
 export default function App() {
   return (
     <AuthProvider>
-      <BookingProvider>
-        <MainRouter />
-      </BookingProvider>
+      <MainRouter />
     </AuthProvider>
   );
 }

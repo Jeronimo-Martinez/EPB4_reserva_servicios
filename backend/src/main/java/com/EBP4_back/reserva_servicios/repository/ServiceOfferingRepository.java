@@ -11,13 +11,15 @@ public interface ServiceOfferingRepository extends JpaRepository<ServiceOffering
     List<ServiceOffering> findAllByBusinessUserEmailIgnoreCaseOrderByCreatedAtDesc(String email);
     List<ServiceOffering> findAllByBusinessIdOrderByCreatedAtDesc(UUID businessId);
 
+    // An empty string means "no filter". Never pass null: Hibernate binds an untyped null as bytea
+    // on PostgreSQL and LOWER() fails.
     @Query("""
             SELECT s FROM ServiceOffering s
-            WHERE (:search IS NULL
+            WHERE (:search = ''
                     OR LOWER(s.name) LIKE LOWER(CONCAT('%', :search, '%'))
                     OR LOWER(s.business.name) LIKE LOWER(CONCAT('%', :search, '%'))
                     OR LOWER(COALESCE(s.description, '')) LIKE LOWER(CONCAT('%', :search, '%')))
-              AND (:category IS NULL OR LOWER(s.category) = LOWER(:category))
+              AND (:category = '' OR LOWER(s.category) = LOWER(:category))
             ORDER BY s.createdAt DESC
             """)
     List<ServiceOffering> searchCatalog(@Param("search") String search, @Param("category") String category);

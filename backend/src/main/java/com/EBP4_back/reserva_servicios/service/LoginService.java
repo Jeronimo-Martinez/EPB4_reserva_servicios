@@ -4,6 +4,8 @@ import com.EBP4_back.reserva_servicios.dto.LoginRequest;
 import com.EBP4_back.reserva_servicios.dto.LoginResponse;
 import com.EBP4_back.reserva_servicios.entity.User;
 import com.EBP4_back.reserva_servicios.repository.UserRepository;
+import com.EBP4_back.reserva_servicios.security.AccessAuditService;
+import com.EBP4_back.reserva_servicios.security.SessionService;
 import java.util.Locale;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -19,18 +21,22 @@ public class LoginService {
     private final RecaptchaValidator recaptchaValidator;
     private final LoginAttemptService attemptService;
     private final SuspiciousLoginNotifier loginNotifier;
+    private final SessionService sessionService;
+    private final AccessAuditService accessAudit;
 
     public LoginService(UserRepository userRepository, PasswordEncoder passwordEncoder,
             RecaptchaValidator recaptchaValidator, LoginAttemptService attemptService,
-            SuspiciousLoginNotifier loginNotifier) {
+            SuspiciousLoginNotifier loginNotifier, SessionService sessionService, AccessAuditService accessAudit) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.recaptchaValidator = recaptchaValidator;
         this.attemptService = attemptService;
         this.loginNotifier = loginNotifier;
+        this.sessionService = sessionService;
+        this.accessAudit = accessAudit;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public LoginResponse login(LoginRequest request, String clientIp) {
         recaptchaValidator.validate(request.recaptchaToken());
         String email = request.email().trim().toLowerCase(Locale.ROOT);
@@ -49,11 +55,16 @@ public class LoginService {
             }
             throw invalidCredentials();
         }
+        // Checked after the password so a blocked account is only revealed to its owner.
+        if (accessAudit.isBlocked(email)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, AccessAuditService.ACCOUNT_BLOCKED);
+        }
         attemptService.recordSuccess(email);
         User found = user.get();
         String role = found.getRole().name();
         String redirectTo = "PROVEEDOR".equals(role) ? "/proveedor" : "/cliente";
-        return new LoginResponse("Inicio de sesion exitoso", found.getEmail(), role, redirectTo);
+        return new LoginResponse("Inicio de sesion exitoso", found.getEmail(), role, redirectTo,
+                sessionService.open(found));
     }
 
     private ResponseStatusException invalidCredentials() {
