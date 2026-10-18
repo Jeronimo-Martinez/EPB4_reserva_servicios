@@ -62,7 +62,7 @@ frontend/
 - **El backend identifica al usuario solo por el token**: ninguna petición lleva `providerEmail` ni `clientEmail`, y los datos que el navegador envíe nunca deciden permisos.
 - Permisos por rol: catálogo, negocios, registro y login son públicos; servicios, horarios y agenda son solo para `PROVEEDOR`; reservas solo para `CLIENTE`. `navigate()` aplica la misma regla en la interfaz.
 - `401`: no hay sesión o ya no es válida. Si había un token guardado, la app cierra la sesión y muestra *"Tu sesión terminó. Inicia sesión de nuevo."*.
-- `403`: el recurso es de otro usuario (*"No tienes permitido acceder a esta información"* / *"…editar esta información"*) o la función es de otro rol. Cada intento queda en el log `AUDIT` del backend; con 5 intentos en 15 minutos se cierran las sesiones de la cuenta y queda bloqueada 15 minutos.
+- `403`: el recurso es de otro usuario (*"No tienes permitido acceder a esta información"* / *"…editar esta información"*) o la función es de otro rol. Cada intento queda en el log `AUDIT` del backend; con 5 intentos en 15 minutos se cierran las sesiones de la cuenta, queda bloqueada 15 minutos y el backend envía una alerta por correo al equipo de seguridad (`SECURITY_ALERT_EMAIL`).
 - `POST /api/v1/auth/logout` invalida el token en el backend (lo usa **Cerrar sesión**).
 
 Para las personas encargadas del backend, esta sección describe los endpoints y formatos de datos que el frontend consume actualmente o espera en las fases de integración:

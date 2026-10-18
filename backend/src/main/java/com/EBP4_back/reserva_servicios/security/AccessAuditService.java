@@ -1,5 +1,6 @@
 package com.EBP4_back.reserva_servicios.security;
 
+import com.EBP4_back.reserva_servicios.service.SuspiciousLoginNotifier;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayDeque;
@@ -29,15 +30,17 @@ public class AccessAuditService {
     private static final Logger AUDIT = LoggerFactory.getLogger("AUDIT");
 
     private final SessionService sessions;
+    private final SuspiciousLoginNotifier notifier;
     private final int maxDenied;
     private final Duration window;
     private final Map<String, Deque<Instant>> denied = new ConcurrentHashMap<>();
     private final Map<String, Instant> blockedUntil = new ConcurrentHashMap<>();
 
-    public AccessAuditService(SessionService sessions,
+    public AccessAuditService(SessionService sessions, SuspiciousLoginNotifier notifier,
             @Value("${app.security.max-denied-access:5}") int maxDenied,
             @Value("${app.security.block-minutes:15}") long blockMinutes) {
         this.sessions = sessions;
+        this.notifier = notifier;
         this.maxDenied = maxDenied;
         this.window = Duration.ofMinutes(blockMinutes);
     }
@@ -58,6 +61,8 @@ public class AccessAuditService {
                 blockedUntil.put(key, now.plus(window));
                 sessions.closeAll(key);
                 AUDIT.warn("CUENTA_BLOQUEADA usuario={} hasta={}", key, now.plus(window));
+                // Async, so the alert email never delays the 403.
+                notifier.notifyAccessBlocked(key, maxDenied, action, resource, now.plus(window));
                 return new ResponseStatusException(HttpStatus.FORBIDDEN, ACCOUNT_BLOCKED);
             }
         }
