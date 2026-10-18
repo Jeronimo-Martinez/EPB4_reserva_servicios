@@ -14,11 +14,11 @@ export const USER_STORAGE_KEY = 'promarket_auth_user';
 export const SESSION_EXPIRED_EVENT = 'promarket:session-expired';
 export const SESSION_ENDED_MESSAGE = 'Tu sesión terminó. Inicia sesión de nuevo.';
 
-function storedToken(): string | undefined {
+function storedSession(): { token?: string } | null {
   try {
-    return JSON.parse(localStorage.getItem(USER_STORAGE_KEY) || 'null')?.token;
+    return JSON.parse(localStorage.getItem(USER_STORAGE_KEY) || 'null');
   } catch {
-    return undefined;
+    return null;
   }
 }
 
@@ -27,7 +27,8 @@ export async function request<T>(
   options: RequestInit = {}
 ): Promise<T> {
   const url = `${BASE_URL}${endpoint}`;
-  const token = storedToken();
+  const session = storedSession();
+  const token = session?.token;
   const headers = {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -43,7 +44,8 @@ export async function request<T>(
     const data = await response.json().catch(() => null);
 
     if (!response.ok) {
-      if (response.status === 401 && token) {
+      // Any 401 while the app believes it is logged in (even with no token saved) ends that session.
+      if (response.status === 401 && session) {
         window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
         // Same text the app shows on logout, so a screen's own error toast does not contradict it.
         throw new ApiError(401, SESSION_ENDED_MESSAGE);
