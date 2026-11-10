@@ -2,58 +2,54 @@ import React, { useState, useEffect } from 'react';
 import { NavBar } from '@/components/layout';
 import { EmptyState, RatingBadge } from '@/components/ui';
 import { useAuth } from '@/context/AuthContext';
-import { Service, ServiceCategory } from '@/types/service';
+import { Service, ServiceCategory, SERVICE_CATEGORIES } from '@/types/service';
 import { fetchCatalogServices } from '@/api/services';
-import { ApiError } from '@/api/client';
 import { IniciarReservaModal } from '@/features/reservas';
 import { categoryLabel } from '@/features/servicios/types';
 
-const CATEGORIES: ServiceCategory[] = [
-  'Todas',
-  'Salud y Bienestar',
-  'Belleza',
-  'Hogar',
-  'Educacion',
-  'Tecnologia',
-  'Gastronomia',
-  'Otros',
-];
+const CATEGORIES = SERVICE_CATEGORIES;
+const SEARCH_DEBOUNCE_MS = 300;
 
 export default function CatalogoServicios() {
   const { user, navigate, openBusiness, catalogCategory } = useAuth();
   const [services, setServices] = useState<Service[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<ServiceCategory>(
     (catalogCategory as ServiceCategory) || 'Todas'
   );
   const [searchQuery, setSearchQuery] = useState('');
+  // The backend filters, so requests wait for the user to stop typing.
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   const [bookingService, setBookingService] = useState<Service | null>(null);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
-    loadServices();
-  }, []);
+    const handle = setTimeout(() => setDebouncedQuery(searchQuery), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(handle);
+  }, [searchQuery]);
 
-  const loadServices = async () => {
+  useEffect(() => {
+    let current = true;
     setLoading(true);
-    try {
-      const data = await fetchCatalogServices();
-      setServices(data.items || []);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const filteredServices = services.filter((srv) => {
-    const matchesCategory =
-      selectedCategory === 'Todas' || srv.category === selectedCategory;
-    const matchesQuery =
-      srv.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      srv.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (srv.businessName && srv.businessName.toLowerCase().includes(searchQuery.toLowerCase()));
-    return matchesCategory && matchesQuery;
-  });
+    setFailed(false);
+    fetchCatalogServices(debouncedQuery, selectedCategory)
+      .then((data) => {
+        if (!current) return;
+        setServices(data.items || []);
+        setTotal(data.total ?? (data.items?.length || 0));
+      })
+      .catch((e) => {
+        if (!current) return;
+        console.error(e);
+        setFailed(true);
+      })
+      .finally(() => current && setLoading(false));
+    return () => {
+      current = false;
+    };
+    // catalogCategory seeds the first selection; later changes come from the chips.
+  }, [debouncedQuery, selectedCategory]);
 
   return (
     <div className="bg-[#f2f3ee] min-h-screen flex flex-col">
@@ -98,34 +94,51 @@ export default function CatalogoServicios() {
         )}
 
         <div className="bg-[#fcfcf8] border border-[#d4d9d3] rounded-[12px] p-4 md:p-6 mb-8 shadow-xs flex flex-col gap-4">
-          <div className="relative w-full">
-            <svg
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-[#66716c]"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-            >
-              <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
-              <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            </svg>
-            <input
-              type="text"
-              placeholder="Buscar por servicio, negocio o palabra clave..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-white border border-[#d4d9d3] rounded-[8px] text-[15px] outline-none focus:border-[#005146] transition-colors text-[#18211e]"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#66716c] hover:text-[#18211e] text-[13px] bg-transparent border-none cursor-pointer"
+          <form
+            role="search"
+            className="relative w-full flex gap-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              // Enter or the button runs the search right away instead of waiting for the debounce.
+              setDebouncedQuery(searchQuery);
+            }}
+          >
+            <div className="relative flex-1">
+              <svg
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-[#66716c]"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
               >
-                Limpiar
-              </button>
-            )}
-          </div>
+                <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
+                <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+              <input
+                type="search"
+                placeholder="Buscar por servicio, negocio o palabra clave..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                aria-label="Buscar servicios"
+                className="w-full pl-12 pr-16 py-3 bg-white border border-[#d4d9d3] rounded-[8px] text-[15px] outline-none focus:border-[#005146] transition-colors text-[#18211e]"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#66716c] hover:text-[#18211e] text-[13px] bg-transparent border-none cursor-pointer"
+                >
+                  Limpiar
+                </button>
+              )}
+            </div>
+            <button
+              type="submit"
+              className="shrink-0 bg-[#005146] hover:bg-[#00403b] text-white font-semibold text-[14px] px-5 rounded-[8px] transition-colors cursor-pointer"
+            >
+              Buscar
+            </button>
+          </form>
 
           <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
             {CATEGORIES.map((cat) => {
@@ -154,7 +167,7 @@ export default function CatalogoServicios() {
             <h2 className="text-[20px] font-bold text-[#18211e]">
               {selectedCategory === 'Todas' ? 'Todos los servicios disponibles' : selectedCategory}
               <span className="text-[#66716c] font-normal text-[15px] ml-2">
-                ({filteredServices.length} resultados)
+                ({loading ? '…' : total} resultados)
               </span>
             </h2>
           </div>
@@ -164,8 +177,42 @@ export default function CatalogoServicios() {
               <div className="inline-block animate-spin w-8 h-8 border-4 border-[#005146] border-t-transparent rounded-full" />
               <p className="mt-3 text-[#66716c] text-[14px]">Cargando servicios...</p>
             </div>
-          ) : filteredServices.length === 0 ? (
-            services.length === 0 ? (
+          ) : failed ? (
+            <EmptyState
+              icon={
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                  <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="1.8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
+              }
+              title="No pudimos cargar los servicios"
+              description="Ocurrió un problema al consultar el catálogo. Intenta de nuevo en unos segundos."
+              actionText="Reintentar"
+              onAction={() => setDebouncedQuery(searchQuery)}
+            />
+          ) : services.length === 0 ? (
+            debouncedQuery || selectedCategory !== 'Todas' ? (
+              <EmptyState
+                icon={
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                    <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="1.8" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" stroke="currentColor" strokeWidth="1.8" />
+                  </svg>
+                }
+                title="No se encontraron servicios"
+                description={
+                  debouncedQuery
+                    ? `No encontramos resultados para "${debouncedQuery}". Intenta con otros términos o restablece los filtros.`
+                    : `No hay servicios disponibles en la categoría "${selectedCategory}". Intenta explorando otras categorías.`
+                }
+                actionText="Restablecer filtros"
+                onAction={() => {
+                  setSelectedCategory('Todas');
+                  setSearchQuery('');
+                  setDebouncedQuery('');
+                }}
+              />
+            ) : (
               <EmptyState
                 icon={
                   <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
@@ -176,30 +223,10 @@ export default function CatalogoServicios() {
                 title="Aún no hay servicios disponibles"
                 description="Los profesionales están configurando sus servicios en la plataforma. Muy pronto encontrarás opciones para reservar."
               />
-            ) : (
-              <EmptyState
-                icon={
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-                    <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="1.8" />
-                    <line x1="21" y1="21" x2="16.65" y2="16.65" stroke="currentColor" strokeWidth="1.8" />
-                  </svg>
-                }
-                title="No se encontraron servicios"
-                description={
-                  searchQuery
-                    ? `No encontramos resultados para "${searchQuery}". Intenta con otros términos o restablece los filtros.`
-                    : `No hay servicios disponibles en la categoría "${selectedCategory}". Intenta explorando otras categorías.`
-                }
-                actionText="Restablecer filtros"
-                onAction={() => {
-                  setSelectedCategory('Todas');
-                  setSearchQuery('');
-                }}
-              />
             )
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredServices.map((srv) => (
+              {services.map((srv) => (
                 <div
                   key={srv.id}
                   className="bg-[#fcfcf8] border border-[#d4d9d3] hover:border-[#005146]/50 rounded-[14px] p-6 shadow-xs hover:shadow-md transition-all duration-200 hover:-translate-y-1 flex flex-col justify-between"

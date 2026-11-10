@@ -219,6 +219,57 @@ class CatalogControllerTest {
     }
 
     @Test
+    void filtersBusinessesByCategoryCaseInsensitive() throws Exception {
+        // "Negocio Catalogo" is Belleza, Centro Vital (seed) is "Salud y Bienestar".
+        newBusiness(true);
+
+        mockMvc.perform(get("/api/v1/catalog/businesses").param("category", "belleza"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.name=='Negocio Catalogo')]").exists())
+                .andExpect(jsonPath("$[?(@.name=='Centro Vital')]").doesNotExist());
+
+        mockMvc.perform(get("/api/v1/catalog/businesses").param("category", "Salud y Bienestar"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.name=='Centro Vital')]").exists())
+                .andExpect(jsonPath("$[?(@.name=='Negocio Catalogo')]").doesNotExist());
+    }
+
+    @Test
+    void combinesSearchAndCategoryWhenSearchingBusinesses() throws Exception {
+        Business business = newBusiness(true);
+        String uniqueService = "Servicio Belleza " + System.nanoTime();
+        services.save(service(business, uniqueService, true));
+
+        // Matching category + matching term: found.
+        mockMvc.perform(get("/api/v1/catalog/businesses")
+                        .param("search", uniqueService)
+                        .param("category", "BELLEZA"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(business.getId().toString()));
+
+        // Same term but a category the business does not belong to: empty.
+        mockMvc.perform(get("/api/v1/catalog/businesses")
+                        .param("search", uniqueService)
+                        .param("category", "Gastronomia"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void blankCategoryListsEveryBusiness() throws Exception {
+        newBusiness(true);
+
+        mockMvc.perform(get("/api/v1/catalog/businesses").param("category", "  "))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.name=='Centro Vital')]").exists())
+                .andExpect(jsonPath("$[?(@.name=='Negocio Catalogo')]").exists());
+
+        mockMvc.perform(get("/api/v1/catalog/businesses"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.name=='Centro Vital')]").exists());
+    }
+
+    @Test
     void serviceWithoutBusinessHoursIsNotBookable() throws Exception {
         ServiceOffering service = services.save(service(newBusiness(false), "Sin Agenda", true));
 

@@ -4,6 +4,7 @@ import { EmptyState, RatingBadge } from '@/components/ui';
 import { useAuth } from '@/context/AuthContext';
 import { ApiError } from '@/api/client';
 import { BusinessDetail, searchBusinesses } from '@/api/services';
+import { ServiceCategory, SERVICE_CATEGORIES } from '@/types/service';
 import { categoryLabel } from '@/features/servicios/types';
 import BusinessAvatar from './BusinessAvatar';
 
@@ -11,6 +12,7 @@ export default function ResultadosNegocios() {
   const { openBusiness } = useAuth();
   const [query, setQuery] = useState('');
   const [applied, setApplied] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<ServiceCategory>('Todas');
   const [results, setResults] = useState<BusinessDetail[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -19,14 +21,14 @@ export default function ResultadosNegocios() {
     let current = true;
     setLoading(true);
     setError('');
-    searchBusinesses(applied)
+    searchBusinesses(applied, selectedCategory)
       .then((res) => current && setResults(res))
       .catch((err: unknown) => current && setError(err instanceof ApiError ? err.message : 'No fue posible buscar negocios.'))
       .finally(() => current && setLoading(false));
     return () => {
       current = false;
     };
-  }, [applied]);
+  }, [applied, selectedCategory]);
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -60,6 +62,28 @@ export default function ResultadosNegocios() {
           </button>
         </form>
 
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none" role="group" aria-label="Filtrar por categoría">
+          {SERVICE_CATEGORIES.map((cat) => {
+            const active = selectedCategory === cat;
+            return (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setSelectedCategory(cat)}
+                aria-pressed={active}
+                className={`shrink-0 px-4 py-2 rounded-full text-[13px] font-medium transition-all cursor-pointer border
+                  ${
+                    active
+                      ? 'bg-[#005146] text-white border-[#005146] shadow-xs'
+                      : 'bg-white text-[#66716c] border-[#d4d9d3] hover:border-[#005146] hover:text-[#18211e]'
+                  }`}
+              >
+                {cat}
+              </button>
+            );
+          })}
+        </div>
+
         <div className="flex items-center justify-between border-b border-[#d4d9d3] pb-3">
           <h2 className="text-[#18211e] text-[16px] font-semibold">Negocios encontrados</h2>
           {!loading && !error && (
@@ -79,11 +103,16 @@ export default function ResultadosNegocios() {
         ) : results.length === 0 ? (
           <EmptyState
             title="No encontramos negocios"
-            description={`No hay negocios que coincidan con “${applied}”. Prueba con otro término.`}
-            actionText="Ver todos los negocios"
+            description={
+              applied || selectedCategory !== 'Todas'
+                ? `No hay negocios que coincidan${applied ? ` con “${applied}”` : ''}${selectedCategory !== 'Todas' ? ` en ${selectedCategory}` : ''}. Prueba con otro término o restablece los filtros.`
+                : 'Aún no hay negocios registrados en la plataforma.'
+            }
+            actionText="Restablecer filtros"
             onAction={() => {
               setQuery('');
               setApplied('');
+              setSelectedCategory('Todas');
             }}
           />
         ) : (

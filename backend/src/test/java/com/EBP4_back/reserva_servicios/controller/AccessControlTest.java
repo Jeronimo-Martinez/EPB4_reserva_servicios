@@ -116,7 +116,7 @@ class AccessControlTest {
     }
 
     @Test
-    void myReservationsListsOnlyTheClientsOwnConfirmedReservations() throws Exception {
+    void myReservationsListsOnlyTheClientsOwnReservations() throws Exception {
         User provider = newUser(UserRole.PROVEEDOR);
         ServiceOffering service = newService(newBusiness(provider));
         User client = newUser(UserRole.CLIENTE);
@@ -126,14 +126,16 @@ class AccessControlTest {
         String earlier = holdId(client, service, 9);
         confirm(earlier, client);
         confirm(holdId(other, service, 11), other);
-        holdId(client, service, 16); // a pending hold is not a reservation yet
+        String activeHold = holdId(client, service, 16); // not confirmed yet, but still visible while it lasts
 
         mockMvc.perform(get("/api/v1/reservations").header("Authorization", bearer(client)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$.length()").value(3))
                 .andExpect(jsonPath("$[0].id").value(earlier))
                 .andExpect(jsonPath("$[1].id").value(later))
+                .andExpect(jsonPath("$[2].id").value(activeHold))
                 .andExpect(jsonPath("$[0].status").value("CONFIRMADA"))
+                .andExpect(jsonPath("$[2].status").value("PENDIENTE"))
                 .andExpect(jsonPath("$[0].businessName").value("Negocio " + provider.getEmail()))
                 .andExpect(jsonPath("$[0].serviceName").value("Servicio Privado"));
         mockMvc.perform(get("/api/v1/reservations").header("Authorization", bearer(newUser(UserRole.CLIENTE))))

@@ -12,17 +12,18 @@ public interface BusinessRepository extends JpaRepository<Business, UUID> {
     Optional<Business> findByUserEmailIgnoreCase(String email);
     boolean existsByUserEmailIgnoreCase(String email);
 
-    // A blank search lists every business; '' instead of null keeps PostgreSQL from typing the parameter as bytea.
+    // A blank search or category lists every business; '' instead of null keeps PostgreSQL from typing the parameter as bytea.
     @Query("""
             SELECT b FROM Business b
-            WHERE :search = ''
+            WHERE (:search = ''
                OR LOWER(b.name) LIKE LOWER(CONCAT('%', :search, '%'))
                OR LOWER(b.category) LIKE LOWER(CONCAT('%', :search, '%'))
                OR LOWER(COALESCE(b.description, '')) LIKE LOWER(CONCAT('%', :search, '%'))
                OR LOWER(b.address) LIKE LOWER(CONCAT('%', :search, '%'))
                OR EXISTS (SELECT s.id FROM ServiceOffering s
-                          WHERE s.business = b AND LOWER(s.name) LIKE LOWER(CONCAT('%', :search, '%')))
+                          WHERE s.business = b AND LOWER(s.name) LIKE LOWER(CONCAT('%', :search, '%'))))
+              AND (:category = '' OR LOWER(b.category) = LOWER(:category))
             ORDER BY b.name
             """)
-    List<Business> search(@Param("search") String search);
+    List<Business> search(@Param("search") String search, @Param("category") String category);
 }

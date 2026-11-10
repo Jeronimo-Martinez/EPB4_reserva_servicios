@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.EBP4_back.reserva_servicios.entity.Business;
 import com.EBP4_back.reserva_servicios.entity.ServiceOffering;
 import com.EBP4_back.reserva_servicios.entity.User;
+import com.EBP4_back.reserva_servicios.enums.ReservationStatus;
 import com.EBP4_back.reserva_servicios.enums.UserRole;
 import com.EBP4_back.reserva_servicios.repository.ServiceOfferingRepository;
 import com.EBP4_back.reserva_servicios.repository.UserRepository;
@@ -113,6 +114,89 @@ class ReservationControllerTest {
 
         String id = holdId(CLIENT, serviceId("Masaje Descontracturante"), slot(15));
         confirm(id, otherClient()).andExpect(status().isForbidden());
+    }
+
+    // HU-21: the client sees every reservation of the account and can filter by state.
+    @Test
+    void mineFiltersByStatusAndNeverListsExpiredHolds() throws Exception {
+        String client = otherClient();
+        UUID service = serviceId("Masaje Descontracturante");
+
+        String confirmed = holdId(client, service, slot(10));
+        confirm(confirmed, client);
+        String cancelled = holdId(client, service, slot(12));
+        confirm(cancelled, client);
+        String attended = holdId(client, service, slot(14));
+        confirm(attended, client);
+        String noShow = holdId(client, service, slot(16));
+        confirm(noShow, client);
+        setStatus(cancelled, ReservationStatus.CANCELADA);
+        setStatus(attended, ReservationStatus.ATENDIDA);
+        setStatus(noShow, ReservationStatus.NO_ASISTIDA);
+        // An abandoned hold expires and must never show up as a reservation of the client.
+        String expired = holdId(client, service, slot(17));
+        expireHold(expired);
+
+        mockMvc.perform(get("/api/v1/reservations").header("Authorization", bearer(client)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(4))
+                .andExpect(jsonPath("$[0].id").value(confirmed))
+                .andExpect(jsonPath("$[0].status").value("CONFIRMADA"))
+                .andExpect(jsonPath("$[1].id").value(cancelled))
+                .andExpect(jsonPath("$[1].status").value("CANCELADA"))
+                .andExpect(jsonPath("$[2].status").value("ATENDIDA"))
+                .andExpect(jsonPath("$[3].status").value("NO_ASISTIDA"));
+
+        mockMvc.perform(get("/api/v1/reservations").param("status", "CANCELADA")
+                        .header("Authorization", bearer(client)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].id").value(cancelled));
+
+        mockMvc.perform(get("/api/v1/reservations").param("status", "ATENDIDA")
+                        .header("Authorization", bearer(client)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].id").value(attended));
+
+        mockMvc.perform(get("/api/v1/reservations").param("status", "no_asistida")
+                        .header("Authorization", bearer(client)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].id").value(noShow));
+
+        mockMvc.perform(get("/api/v1/reservations").param("status", "CONFIRMADA")
+                        .header("Authorization", bearer(client)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].id").value(confirmed));
+
+        // The expired hold is not a reservation, so filtering by PENDIENTE returns nothing.
+        mockMvc.perform(get("/api/v1/reservations").param("status", "PENDIENTE")
+                        .header("Authorization", bearer(client)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+
+        mockMvc.perform(get("/api/v1/reservations").param("status", "INVENTADA")
+                        .header("Authorization", bearer(client)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Estado de reserva no valido"));
+    }
+
+    private void setStatus(String id, ReservationStatus status) {
+        new TransactionTemplate(transactionManager).executeWithoutResult(tx -> entityManager
+                .createQuery("UPDATE Reservation r SET r.status = :status WHERE r.id = :id")
+                .setParameter("status", status)
+                .setParameter("id", UUID.fromString(id))
+                .executeUpdate());
+    }
+
+    private void expireHold(String id) {
+        new TransactionTemplate(transactionManager).executeWithoutResult(tx -> entityManager
+                .createQuery("UPDATE Reservation r SET r.holdExpiresAt = :past WHERE r.id = :id")
+                .setParameter("past", Instant.now().minusSeconds(1))
+                .setParameter("id", UUID.fromString(id))
+                .executeUpdate());
     }
 
     private ResultActions hold(String email, UUID serviceId, Instant startAt) throws Exception {

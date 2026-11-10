@@ -26,5 +26,5 @@ public interface ReservationRepository extends JpaRepository<Reservation, UUID> 
     void deleteAllByClientEmailIgnoreCaseAndStatus(String email, ReservationStatus status);
 
     @EntityGraph(attributePaths = {"service", "service.business"})
-    List<Reservation> findAllByClientIdAndStatusOrderByStartAtAsc(UUID clientId, ReservationStatus status);
+    List<Reservation> findAllByClientIdOrderByStartAtAsc(UUID clientId);
 }
