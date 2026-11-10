@@ -8,6 +8,7 @@ import com.EBP4_back.reserva_servicios.entity.ServiceOffering;
 import com.EBP4_back.reserva_servicios.enums.ServiceCategory;
 import com.EBP4_back.reserva_servicios.repository.BusinessRepository;
 import com.EBP4_back.reserva_servicios.repository.ServiceOfferingRepository;
+import com.EBP4_back.reserva_servicios.security.AccessAuditService;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Locale;
@@ -22,20 +23,22 @@ import org.springframework.web.server.ResponseStatusException;
 public class ServiceCatalogService {
     private static final String BUSINESS_NOT_FOUND = "El proveedor no tiene un negocio registrado";
     private static final String SERVICE_NOT_FOUND = "El servicio no existe";
-    private static final String OWNERSHIP_ERROR = "El servicio no pertenece al proveedor indicado";
     private static final String INVALID_DURATION = "La duracion debe ser mayor a 0";
     private static final String INVALID_PRICE = "El precio debe ser mayor a 0";
     private final BusinessRepository businessRepository;
     private final ServiceOfferingRepository serviceRepository;
+    private final AccessAuditService accessAudit;
 
-    public ServiceCatalogService(BusinessRepository businessRepository, ServiceOfferingRepository serviceRepository) {
+    public ServiceCatalogService(BusinessRepository businessRepository, ServiceOfferingRepository serviceRepository,
+            AccessAuditService accessAudit) {
         this.businessRepository = businessRepository;
         this.serviceRepository = serviceRepository;
+        this.accessAudit = accessAudit;
     }
 
     @Transactional
-    public ServiceOfferingResponse create(ServiceOfferingRequest request) {
-        Business business = requireBusiness(request.providerEmail());
+    public ServiceOfferingResponse create(ServiceOfferingRequest request, String providerEmail) {
+        Business business = requireBusiness(providerEmail);
         validateDuration(request.durationMinutes());
         validatePrice(request.price());
         ServiceOffering saved = serviceRepository.save(new ServiceOffering(business,
@@ -57,9 +60,9 @@ public class ServiceCatalogService {
     }
 
     @Transactional
-    public ServiceOfferingResponse update(UUID id, ServiceOfferingRequest request) {
+    public ServiceOfferingResponse update(UUID id, ServiceOfferingRequest request, String providerEmail) {
         ServiceOffering service = requireService(id);
-        assertOwnership(service, request.providerEmail());
+        assertOwnership(service, providerEmail);
         validateDuration(request.durationMinutes());
         validatePrice(request.price());
         service.updateDetails(request.name().trim(),
@@ -98,7 +101,8 @@ public class ServiceCatalogService {
     private void assertOwnership(ServiceOffering service, String providerEmail) {
         String owner = service.getBusiness().getUser().getEmail();
         if (!owner.equalsIgnoreCase(normalizeEmail(providerEmail))) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, OWNERSHIP_ERROR);
+            throw accessAudit.deny(providerEmail, "EDITAR_SERVICIO", "servicio " + service.getId(),
+                    AccessAuditService.NOT_ALLOWED_EDIT);
         }
     }
 

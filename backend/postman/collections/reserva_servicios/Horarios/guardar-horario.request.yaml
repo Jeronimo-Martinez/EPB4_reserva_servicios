@@ -1,0 +1,47 @@
+$kind: http-request
+name: Guardar Horario
+order: 2000
+method: PUT
+url: '{{baseUrl}}/api/v1/schedule/hours'
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "days": [
+        {
+          "dayOfWeek": "MONDAY",
+          "startTime": "08:00",
+          "endTime": "18:00"
+        },
+        {
+          "dayOfWeek": "TUESDAY",
+          "startTime": "08:00",
+          "endTime": "18:00"
+        },
+        {
+          "dayOfWeek": "WEDNESDAY",
+          "startTime": "08:00",
+          "endTime": "18:00"
+        },
+        {
+          "dayOfWeek": "THURSDAY",
+          "startTime": "08:00",
+          "endTime": "18:00"
+        },
+        {
+          "dayOfWeek": "FRIDAY",
+          "startTime": "08:00",
+          "endTime": "18:00"
+        },
+        {
+          "dayOfWeek": "SATURDAY",
+          "startTime": "09:00",
+          "endTime": "13:00"
+        }
+      ]
+    }

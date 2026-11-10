@@ -40,7 +40,11 @@ class RegistrationControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{" + "\"email\":\"" + email + "\",\"code\":\"" + code + "\"}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.role").value("CLIENTE"));
+                .andExpect(jsonPath("$.role").value("CLIENTE"))
+                .andExpect(jsonPath("$.firstName").value("Ana"))
+                .andExpect(jsonPath("$.lastName").value("Gomez"))
+                .andExpect(jsonPath("$.businessName").doesNotExist())
+                .andExpect(jsonPath("$.businessCategory").doesNotExist());
     }
 
     @Test

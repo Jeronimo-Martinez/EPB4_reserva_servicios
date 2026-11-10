@@ -55,3 +55,5 @@ export const DEMO_SERVICIOS: Servicio[] = [
   { id: "2", nombre: "Masaje Descontracturante", categoria: "SALUD_Y_BIENESTAR", duracion: 60, precio: 80000, descripcion: "Masaje profundo para aliviar tensiones musculares.", activo: true },
   { id: "3", nombre: "Limpieza Facial Profunda", categoria: "BELLEZA", duracion: 90, precio: 110000, descripcion: "Limpieza y exfoliación facial con productos premium.", activo: false },
 ];
+
+export const categoryLabel = (category: string) => CATEGORIAS_SERVICIO_LABELS[category] || category;

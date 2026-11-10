@@ -82,3 +82,8 @@ export async function resendCodeApi(
     }),
   });
 }
+
+/** Closes the session on the backend so the token stops working right away. */
+export async function logoutApi(): Promise<void> {
+  await request<void>('/api/v1/auth/logout', { method: 'POST' });
+}

@@ -96,14 +96,6 @@ export default function InicioSesion({ onRegistro }: { onRegistro?: () => void }
     }
   };
 
-  const setDemoAccount = (demoEmail: string, demoPass: string) => {
-    setEmail(demoEmail);
-    setPassword(demoPass);
-    setEmailError('');
-    setPasswordError('');
-    setGlobalError('');
-  };
-
   // ─── Recuperación enviada ──────────────────────
   if (screen === 'recuperacion-enviada') {
     return (
@@ -241,43 +233,6 @@ export default function InicioSesion({ onRegistro }: { onRegistro?: () => void }
               Accede a tu cuenta para gestionar tus reservas y servicios.
             </p>
           </div>
-
-          {/* Accesos rápidos de prueba */}
-          <div className="bg-[#e6f0ef] border border-[#b8d4d1] rounded-[10px] p-4 mb-6 hidden">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[#005146] text-[12px] font-semibold uppercase tracking-wider">
-                Acceso Rápido de Prueba
-              </span>
-              <span className="text-[#005146] text-[11px] bg-white px-2 py-0.5 rounded-full font-medium">
-                Simulación
-              </span>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <button
-                type="button"
-                onClick={async () => {
-                  setLoading(true);
-                  await login({ email: 'cliente.demo@example.com', password: 'Cliente123', recaptchaToken: captchaToken ?? '' });
-                }}
-                className="flex-1 bg-white hover:bg-[#d5e7e5] border border-[#b8d4d1] rounded-[8px] py-2 px-3 text-left transition-colors cursor-pointer"
-              >
-                <strong className="text-[#005146] text-[13px] block">Entrar como Cliente</strong>
-                <span className="text-[11px] text-[#66716c]">Ana Gómez</span>
-              </button>
-              <button
-                type="button"
-                onClick={async () => {
-                  setLoading(true);
-                  await login({ email: 'contacto@centrovital.com', password: 'Proveedor1!', recaptchaToken: captchaToken ?? '' });
-                }}
-                className="flex-1 bg-white hover:bg-[#d5e7e5] border border-[#b8d4d1] rounded-[8px] py-2 px-3 text-left transition-colors cursor-pointer"
-              >
-                <strong className="text-[#005146] text-[13px] block">Entrar como Proveedor</strong>
-                <span className="text-[11px] text-[#66716c]">Centro Vital</span>
-              </button>
-            </div>
-          </div>
-
 
           {/* Banner de error */}
           {globalError && (

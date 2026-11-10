@@ -30,7 +30,27 @@ class LoginControllerTest {
                 .andExpect(jsonPath("$.message").value("Inicio de sesion exitoso"))
                 .andExpect(jsonPath("$.email").value("cliente.demo@example.com"))
                 .andExpect(jsonPath("$.role").value("CLIENTE"))
-                .andExpect(jsonPath("$.redirectTo").value("/cliente"));
+                .andExpect(jsonPath("$.redirectTo").value("/cliente"))
+                .andExpect(jsonPath("$.firstName").value("Cliente"))
+                .andExpect(jsonPath("$.lastName").value("Demo"))
+                .andExpect(jsonPath("$.businessName").doesNotExist())
+                .andExpect(jsonPath("$.businessCategory").doesNotExist());
+    }
+
+    @Test
+    void logsInProviderAndReturnsBusinessData() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"centro.vital@example.com","password":"Proveedor123","recaptchaToken":"test-token"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.role").value("PROVEEDOR"))
+                .andExpect(jsonPath("$.redirectTo").value("/proveedor"))
+                .andExpect(jsonPath("$.firstName").value("Jeronimo"))
+                .andExpect(jsonPath("$.lastName").value("Martinez"))
+                .andExpect(jsonPath("$.businessName").value("Centro Vital"))
+                .andExpect(jsonPath("$.businessCategory").value("Salud y Bienestar"));
     }
 
     @Test

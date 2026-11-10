@@ -4,12 +4,13 @@ order: 4000
 method: PATCH
 url: '{{baseUrl}}/api/v1/services/{{serviceId}}/availability'
 headers:
+  - key: Authorization
+    value: Bearer {{token}}
   - key: Content-Type
     value: application/json
 body:
   type: json
   content: |-
     {
-      "providerEmail": "centro.vital@example.com",
       "available": false
     }

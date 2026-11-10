@@ -4,17 +4,18 @@ order: 1000
 method: POST
 url: '{{baseUrl}}/api/v1/services'
 headers:
+  - key: Authorization
+    value: Bearer {{token}}
   - key: Content-Type
     value: application/json
 body:
   type: json
   content: |-
     {
-      "providerEmail": "centro.vital@example.com",
       "name": "Manicure Spa",
       "category": "Belleza",
       "description": "Manicure completo con hidratacion y esmaltado semipermanente.",
       "durationMinutes": 60,
-      "price": 55000.00,
+      "price": 55000.0,
       "available": true
     }

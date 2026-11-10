@@ -2,4 +2,7 @@ $kind: http-request
 name: Ver Resumen
 order: 2000
 method: GET
-url: '{{baseUrl}}/api/v1/reservations/{{reservationId}}?clientEmail=cliente.demo@example.com'
+url: '{{baseUrl}}/api/v1/reservations/{{reservationId}}'
+headers:
+  - key: Authorization
+    value: Bearer {{token}}

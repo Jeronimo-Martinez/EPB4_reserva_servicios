@@ -1,0 +1,5 @@
+$kind: http-request
+name: Buscar Negocios
+order: 6500
+method: GET
+url: '{{baseUrl}}/api/v1/catalog/businesses?search=centro'

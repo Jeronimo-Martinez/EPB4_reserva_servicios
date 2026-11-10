@@ -1,0 +1,5 @@
+$kind: http-request
+name: Detalle Negocio
+order: 7000
+method: GET
+url: '{{baseUrl}}/api/v1/catalog/businesses/{{businessId}}'

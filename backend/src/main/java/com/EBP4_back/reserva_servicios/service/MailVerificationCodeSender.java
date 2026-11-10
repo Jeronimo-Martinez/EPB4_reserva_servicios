@@ -1,16 +1,16 @@
 package com.EBP4_back.reserva_servicios.service;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.mail.MailSender;
 import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Component;
 
 @Component
 @ConditionalOnProperty(prefix = "app.mail", name = "enabled", havingValue = "true")
 public class MailVerificationCodeSender implements VerificationCodeSender {
-    private final JavaMailSender mailSender;
+    private final MailSender mailSender;
 
-    public MailVerificationCodeSender(JavaMailSender mailSender) {
+    public MailVerificationCodeSender(MailSender mailSender) {
         this.mailSender = mailSender;
     }
 

@@ -4,13 +4,14 @@ order: 1000
 method: POST
 url: '{{baseUrl}}/api/v1/reservations/holds'
 headers:
+  - key: Authorization
+    value: Bearer {{token}}
   - key: Content-Type
     value: application/json
 body:
   type: json
   content: |-
     {
-      "clientEmail": "cliente.demo@example.com",
       "serviceId": "{{serviceId}}",
       "startAt": "2026-12-01T14:30:00Z"
     }

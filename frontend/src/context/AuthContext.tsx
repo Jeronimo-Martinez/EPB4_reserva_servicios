@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import {
   User,
   LoginCredentials,
@@ -11,15 +11,14 @@ import {
   registerProviderApi,
   verifyCodeApi,
   resendCodeApi,
+  logoutApi,
 } from '@/api/auth';
-import { ApiError } from '@/api/client';
+import { ApiError, SESSION_ENDED_MESSAGE, SESSION_EXPIRED_EVENT, USER_STORAGE_KEY } from '@/api/client';
+import { Service } from '@/types/service';
 
 export type AppView =
   | 'landing'
   | 'catalogo'
-  | 'negocio'
-  | 'disponibilidad'
-  | 'reserva'
   | 'reservas'
   | 'login'
   | 'registro-cliente'
@@ -27,6 +26,9 @@ export type AppView =
   | 'servicios'
   | 'horarios'
   | 'agenda'
+  | 'reservar'
+  | 'negocios'
+  | 'negocio'
   | 'perfil';
 
 interface NotificationState {
@@ -49,24 +51,50 @@ interface AuthContextType {
   resendCode: (email: string) => Promise<void>;
   registerProvider: (data: RegisterProviderDTO) => Promise<void>;
   updateUserProfile: (data: Partial<User>) => void;
+  /** Servicio con el que el cliente abrió el flujo de reserva. */
+  bookingService: Service | null;
+  startBooking: (service: Service) => void;
+  /** Negocio abierto en el detalle y vista a la que regresa "Volver". */
+  selectedBusinessId: string | null;
+  businessReturnView: AppView;
+  openBusiness: (businessId: string) => void;
+  /** Categoría preseleccionada al abrir el catálogo desde la landing. */
+  catalogCategory: string | null;
+  openCatalog: (category?: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const USER_STORAGE_KEY = 'promarket_auth_user';
+// Least privilege in the UI too (the backend enforces the same rule): each role only opens its own screens.
+const PROVIDER_VIEWS: AppView[] = ['servicios', 'horarios', 'agenda'];
+const CLIENT_VIEWS: AppView[] = ['reservas', 'reservar'];
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(() => {
     try {
       const stored = localStorage.getItem(USER_STORAGE_KEY);
-      return stored ? JSON.parse(stored) : null;
+      const saved: User | null = stored ? JSON.parse(stored) : null;
+      // A session saved without a token (before HA-29) cannot call the backend: ask to log in again.
+      return saved?.token ? saved : null;
     } catch {
       return null;
     }
   });
 
+  // navigate() can run right after setUser() in the same handler, before the re-render; the ref is never stale.
+  const userRef = useRef(user);
+  userRef.current = user;
+  const signIn = (signedUser: User) => {
+    userRef.current = signedUser;
+    setUser(signedUser);
+  };
+
   const [currentView, setCurrentView] = useState<AppView>('landing');
   const [notification, setNotification] = useState<NotificationState | null>(null);
+  const [bookingService, setBookingService] = useState<Service | null>(null);
+  const [selectedBusinessId, setSelectedBusinessId] = useState<string | null>(null);
+  const [businessReturnView, setBusinessReturnView] = useState<AppView>('negocios');
+  const [catalogCategory, setCatalogCategory] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -75,6 +103,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.removeItem(USER_STORAGE_KEY);
     }
   }, [user]);
+
+  useEffect(() => {
+    const onSessionExpired = () => {
+      setUser(null);
+      setCurrentView('login');
+      showNotification('info', SESSION_ENDED_MESSAGE);
+    };
+    window.addEventListener(SESSION_EXPIRED_EVENT, onSessionExpired);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onSessionExpired);
+    // showNotification only uses state setters, so the first one stays valid.
+  }, []);
 
   const showNotification = (type: 'success' | 'info' | 'error', message: string) => {
     setNotification({ type, message });
@@ -86,8 +125,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const clearNotification = () => setNotification(null);
 
   const navigate = (view: AppView) => {
+    const role = userRef.current?.role;
+    if ((PROVIDER_VIEWS.includes(view) && role !== 'PROVEEDOR') || (CLIENT_VIEWS.includes(view) && role !== 'CLIENTE')) {
+      showNotification('error', 'No tienes permitido acceder a esta sección.');
+      return;
+    }
     setCurrentView(view);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const startBooking = (service: Service) => {
+    if (!user) {
+      showNotification('info', 'Inicia sesión para reservar una cita.');
+      navigate('login');
+      return;
+    }
+    setBookingService(service);
+    navigate('reservar');
+  };
+
+  const openBusiness = (businessId: string) => {
+    setSelectedBusinessId(businessId);
+    // Coming back from the booking flow keeps the original origin (results or catalog).
+    if (currentView !== 'reservar') setBusinessReturnView(currentView);
+    navigate('negocio');
+  };
+
+  const openCatalog = (category?: string) => {
+    setCatalogCategory(category || null);
+    navigate('catalogo');
   };
 
   const login = async (credentials: LoginCredentials) => {
@@ -95,12 +161,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const loggedUser: User = {
       id: `user-${res.email}`,
       email: res.email,
-      firstName: res.email.split('@')[0],
+      firstName: res.firstName || res.email.split('@')[0],
+      lastName: res.lastName,
       role: res.role,
+      businessName: res.businessName,
+      businessCategory: res.businessCategory,
       isVerified: true,
+      token: res.token,
     };
 
-    setUser(loggedUser);
+    signIn(loggedUser);
     showNotification('success', `¡Bienvenido de nuevo, ${loggedUser.firstName}!`);
 
     if (loggedUser.role === 'PROVEEDOR') {
@@ -111,6 +181,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
+    if (userRef.current?.token) {
+      // Best effort: the token is dropped locally even if the backend cannot be reached.
+      logoutApi().catch(() => undefined);
+    }
     setUser(null);
     showNotification('info', 'Has cerrado sesión con éxito.');
     navigate('landing');
@@ -125,11 +199,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const newUser: User = {
       id: `user-${res.email}`,
       email: res.email,
-      firstName: email.split('@')[0],
+      firstName: res.firstName || email.split('@')[0],
+      lastName: res.lastName,
       role: res.role as User['role'],
+      businessName: res.businessName,
+      businessCategory: res.businessCategory,
       isVerified: true,
+      token: res.token,
     };
-    setUser(newUser);
+    signIn(newUser);
     return { role: res.role };
   };
 
@@ -163,6 +241,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         resendCode,
         registerProvider,
         updateUserProfile,
+        bookingService,
+        startBooking,
+        selectedBusinessId,
+        businessReturnView,
+        openBusiness,
+        catalogCategory,
+        openCatalog,
       }}
     >
       {children}

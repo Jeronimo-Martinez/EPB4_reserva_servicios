@@ -14,11 +14,13 @@ import com.EBP4_back.reserva_servicios.enums.UserRole;
 import com.EBP4_back.reserva_servicios.repository.BusinessRepository;
 import com.EBP4_back.reserva_servicios.repository.UserRepository;
 import com.EBP4_back.reserva_servicios.repository.VerificationCodeRepository;
+import com.EBP4_back.reserva_servicios.security.SessionService;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -37,17 +39,19 @@ public class RegistrationService {
     private final PasswordEncoder passwordEncoder;
     private final VerificationCodeSender codeSender;
     private final RecaptchaValidator recaptchaValidator;
+    private final SessionService sessionService;
     private final SecureRandom random = new SecureRandom();
 
     public RegistrationService(UserRepository userRepository, BusinessRepository businessRepository,
             VerificationCodeRepository codeRepository, PasswordEncoder passwordEncoder,
-            VerificationCodeSender codeSender, RecaptchaValidator recaptchaValidator) {
+            VerificationCodeSender codeSender, RecaptchaValidator recaptchaValidator, SessionService sessionService) {
         this.userRepository = userRepository;
         this.businessRepository = businessRepository;
         this.codeRepository = codeRepository;
         this.passwordEncoder = passwordEncoder;
         this.codeSender = codeSender;
         this.recaptchaValidator = recaptchaValidator;
+        this.sessionService = sessionService;
     }
 
     @Transactional
@@ -90,7 +94,15 @@ public class RegistrationService {
         }
         code.markUsed();
         user.verify();
-        return new VerificationResponse("Registro verificado exitosamente", user.getEmail(), user.getRole().name());
+        // El negocio solo aplica a proveedores; para clientes queda vacio.
+        Optional<Business> business = user.getRole() == UserRole.PROVEEDOR
+                ? businessRepository.findByUserEmailIgnoreCase(user.getEmail())
+                : Optional.empty();
+        // Verifying the code proves the mailbox, so the user leaves this step already signed in.
+        return new VerificationResponse("Registro verificado exitosamente", user.getEmail(), user.getRole().name(),
+                sessionService.open(user), user.getFirstName(), user.getLastName(),
+                business.map(Business::getName).orElse(null),
+                business.map(Business::getCategory).orElse(null));
     }
 
     @Transactional
