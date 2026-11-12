@@ -64,7 +64,7 @@ function validateSchedule(schedule: Schedule): ScheduleErrors {
 }
 
 export default function HorarioAtencion() {
-  const { user, showNotification } = useAuth();
+  const { user, showNotification, navigate } = useAuth();
   const [schedule, setSchedule] = useState<Schedule>(defaultSchedule);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -142,14 +142,23 @@ export default function HorarioAtencion() {
             />
           )}
 
-          <div>
-            <p className="text-[#005146] text-[11px] font-semibold tracking-[0.88px] uppercase">
-              Disponibilidad de reservas
-            </p>
-            <h2 className="text-[#18211e] text-[24px] font-bold leading-tight mt-1">Horario de atención</h2>
-            <p className="text-[#66716c] text-[14px] mt-1">
-              Define cuándo pueden solicitar una cita tus clientes.
-            </p>
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+            <div>
+              <p className="text-[#005146] text-[11px] font-semibold tracking-[0.88px] uppercase">
+                Disponibilidad de reservas
+              </p>
+              <h2 className="text-[#18211e] text-[24px] font-bold leading-tight mt-1">Horario de atención</h2>
+              <p className="text-[#66716c] text-[14px] mt-1">
+                Define cuándo pueden solicitar una cita tus clientes.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate('bloqueo-horarios')}
+              className="bg-white hover:bg-[#e6f0ef] text-[#005146] border border-[#005146] font-semibold text-[13px] px-4 py-2 rounded-[8px] transition-colors cursor-pointer self-start sm:self-auto shrink-0 shadow-2xs"
+            >
+              Gestionar Bloqueos de Horario →
+            </button>
           </div>
 
           <section className="bg-[#fcfcf8] border border-[#d4d9d3] rounded-[12px] shadow-xs overflow-hidden">

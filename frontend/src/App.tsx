@@ -9,6 +9,21 @@ import { AgendaNegocio } from '@/features/agenda';
 import { MisReservas, ReservarCita } from '@/features/reservas';
 import { DetalleNegocio, ResultadosNegocios } from '@/features/negocios';
 import { PerfilUsuario } from '@/features/perfil';
+import {
+  RecuperacionContrasena,
+  ActualizacionPerfilUsuario,
+  ActualizacionPerfilNegocio,
+  BloqueoFechasHorarios,
+  CancelacionReservaCliente,
+  ReprogramacionReserva,
+  CancelacionReservaProveedor,
+  HistorialReservasProveedor,
+  RegistroAsistenciaReserva,
+  NotificacionesEstadoReservas,
+  ReporteUsoServicios,
+  ReporteOcupacionCancelaciones,
+  ExportacionReportesCSV,
+} from '@/features/sprint3';
 
 function MainRouter() {
   const { currentView, notification, clearNotification } = useAuth();
@@ -39,6 +54,32 @@ function MainRouter() {
         return <DetalleNegocio />;
       case 'perfil':
         return <PerfilUsuario />;
+      case 'recuperar-contrasena':
+        return <RecuperacionContrasena />;
+      case 'perfil-cliente':
+        return <ActualizacionPerfilUsuario />;
+      case 'perfil-negocio':
+        return <ActualizacionPerfilNegocio />;
+      case 'bloqueo-horarios':
+        return <BloqueoFechasHorarios />;
+      case 'cancelar-reserva-cliente':
+        return <CancelacionReservaCliente />;
+      case 'reprogramar-reserva':
+        return <ReprogramacionReserva />;
+      case 'cancelar-reserva-proveedor':
+        return <CancelacionReservaProveedor />;
+      case 'historial-proveedor':
+        return <HistorialReservasProveedor />;
+      case 'asistencia-reserva':
+        return <RegistroAsistenciaReserva />;
+      case 'notificaciones':
+        return <NotificacionesEstadoReservas />;
+      case 'reporte-servicios':
+        return <ReporteUsoServicios />;
+      case 'reporte-ocupacion':
+        return <ReporteOcupacionCancelaciones />;
+      case 'reporte-exportar':
+        return <ExportacionReportesCSV />;
       case 'landing':
       default:
         return <Landing />;
@@ -72,11 +113,17 @@ function MainRouter() {
                 <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
               </svg>
             )}
+            {notification.type === 'info' && (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+                <path d="M12 16v-4M12 8h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            )}
             <span className="flex-1">{notification.message}</span>
             <button
               type="button"
               onClick={clearNotification}
-              className="text-white/80 hover:text-white ml-2 text-[16px] bg-transparent border-none cursor-pointer"
+              className="text-white/70 hover:text-white ml-2 text-[16px] cursor-pointer bg-transparent border-none"
             >
               ×
             </button>
@@ -84,7 +131,7 @@ function MainRouter() {
         </div>
       )}
 
-      {/* Vista activa con animación de transición */}
+      {/* Vista activa con animación suave de entrada */}
       <div key={currentView} className="flex-1 flex flex-col animate-page-enter">
         {renderCurrentView()}
       </div>

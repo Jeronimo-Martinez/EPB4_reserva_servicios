@@ -77,21 +77,13 @@ export default function NavBar({ links: customLinks, trailing, avatarInitial: cu
       },
       {
         label: 'Reservas Recibidas',
-        onClick: () => {
-          showNotification(
-            'info',
-            'Reservas Recibidas: Módulo actualmente en desarrollo.'
-          );
-        },
+        active: currentView === 'historial-proveedor' || currentView === 'asistencia-reserva' || currentView === 'cancelar-reserva-proveedor',
+        onClick: () => navigate('historial-proveedor'),
       },
       {
         label: 'Reportes',
-        onClick: () => {
-          showNotification(
-            'info',
-            'Reportes de Ocupación: Módulo actualmente en desarrollo.'
-          );
-        },
+        active: currentView === 'reporte-servicios' || currentView === 'reporte-ocupacion' || currentView === 'reporte-exportar',
+        onClick: () => navigate('reporte-servicios'),
       }
     );
   }
@@ -216,7 +208,8 @@ export default function NavBar({ links: customLinks, trailing, avatarInitial: cu
                       type="button"
                       onClick={() => {
                         setDropdownOpen(false);
-                        navigate('perfil');
+                        if (user?.role === 'PROVEEDOR') navigate('perfil-negocio');
+                        else navigate('perfil-cliente');
                       }}
                       className="w-full px-4 py-2.5 text-left text-[13px] text-[#18211e] hover:bg-[#f2f3ee] flex items-center gap-2.5 cursor-pointer bg-transparent border-none transition-colors"
                     >
@@ -225,6 +218,20 @@ export default function NavBar({ links: customLinks, trailing, avatarInitial: cu
                         <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
                       </svg>
                       {user?.role === 'PROVEEDOR' ? 'Perfil de Negocio' : 'Mi Perfil'}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDropdownOpen(false);
+                        navigate('notificaciones');
+                      }}
+                      className="w-full px-4 py-2.5 text-left text-[13px] text-[#18211e] hover:bg-[#f2f3ee] flex items-center gap-2.5 cursor-pointer bg-transparent border-none transition-colors"
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      Notificaciones
                     </button>
 
                     <div className="my-1 border-t border-[#ecefe9]" />
