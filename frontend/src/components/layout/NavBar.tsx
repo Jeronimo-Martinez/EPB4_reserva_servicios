@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import ProMarketLogo from './ProMarketLogo';
 import { useAuth } from '@/context/AuthContext';
+import { useTextSize, TextZoomLevel } from '@/context/TextSizeContext';
 
 interface NavLink {
   label: string;
@@ -17,6 +18,7 @@ interface NavBarProps {
 
 export default function NavBar({ links: customLinks, trailing, avatarInitial: customAvatar }: NavBarProps) {
   const { user, isAuthenticated, currentView, navigate, logout, showNotification } = useAuth();
+  const { zoom, setZoom, increaseZoom, decreaseZoom } = useTextSize();
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   // Navegación limpia y consistente
@@ -102,17 +104,17 @@ export default function NavBar({ links: customLinks, trailing, avatarInitial: cu
 
   return (
     <header className="bg-[#fcfcf8] border-b border-[#d4d9d3] w-full z-20 sticky top-0 shadow-xs backdrop-blur-md bg-opacity-95">
-      <div className="max-w-[1440px] mx-auto px-6 lg:px-10 py-3.5 flex items-center justify-between">
+      <div className="max-w-[1440px] mx-auto px-6 lg:px-10 py-3.5 flex items-center justify-between gap-4">
         {/* Logo con micro-interacción */}
         <div
           onClick={handleLogoClick}
-          className="cursor-pointer select-none transition-transform duration-150 active:scale-95 hover:opacity-90"
+          className="cursor-pointer select-none transition-transform duration-150 active:scale-95 hover:opacity-90 shrink-0"
         >
           <ProMarketLogo />
         </div>
 
         {/* Links de navegación */}
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4 sm:gap-6">
           <nav className="hidden md:flex items-center gap-6">
             {activeLinks.map((link) => (
               <button
@@ -136,6 +138,43 @@ export default function NavBar({ links: customLinks, trailing, avatarInitial: cu
               </button>
             ))}
           </nav>
+
+          {/* Control de accesibilidad de tamaño de texto (HU-30 / HU-28 - Hasta 200%) */}
+          <div
+            className="flex items-center bg-[#f2f3ee] border border-[#d4d9d3] rounded-full px-2 py-0.5 shadow-2xs shrink-0"
+            role="group"
+            aria-label="Control de accesibilidad de tamaño de texto"
+            title="Ajustar tamaño de texto (Accesibilidad hasta 200%)"
+          >
+            <button
+              type="button"
+              onClick={decreaseZoom}
+              disabled={zoom <= 100}
+              title="Disminuir texto"
+              aria-label="Disminuir tamaño de texto"
+              className="w-6 h-6 rounded-full flex items-center justify-center text-[12px] font-bold text-[#18211e] hover:bg-white disabled:opacity-30 disabled:hover:bg-transparent transition-colors cursor-pointer bg-transparent border-none"
+            >
+              A-
+            </button>
+            <button
+              type="button"
+              onClick={() => setZoom(zoom === 200 ? 100 : ((zoom + 25) as TextZoomLevel))}
+              className="px-1.5 text-[11px] font-bold text-[#005146] hover:underline cursor-pointer bg-transparent border-none select-none tracking-tight"
+              title="Alternar tamaño de texto (100% - 200%)"
+            >
+              {zoom}%
+            </button>
+            <button
+              type="button"
+              onClick={increaseZoom}
+              disabled={zoom >= 200}
+              title="Aumentar texto hasta 200%"
+              aria-label="Aumentar tamaño de texto hasta 200%"
+              className="w-6 h-6 rounded-full flex items-center justify-center text-[13px] font-bold text-[#18211e] hover:bg-white disabled:opacity-30 disabled:hover:bg-transparent transition-colors cursor-pointer bg-transparent border-none"
+            >
+              A+
+            </button>
+          </div>
 
           {/* Acciones de usuario autenticado o invitado consistente */}
           {!isAuthenticated ? (

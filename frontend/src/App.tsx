@@ -1,5 +1,6 @@
 import React from 'react';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { TextSizeProvider } from '@/context/TextSizeContext';
 import Landing from '@/pages/Landing';
 import { CatalogoServicios } from '@/features/cliente';
 import { InicioSesion, RegistroCliente, RegistroProveedor } from '@/features/auth';
@@ -142,7 +143,9 @@ function MainRouter() {
 export default function App() {
   return (
     <AuthProvider>
-      <MainRouter />
+      <TextSizeProvider>
+        <MainRouter />
+      </TextSizeProvider>
     </AuthProvider>
   );
 }
