@@ -13,7 +13,17 @@ const calendarIcon = (
   </svg>
 );
 
-function ReservationCard({ reservation, past }: { reservation: ReservationResponse; past: boolean }) {
+function ReservationCard({
+  reservation,
+  past,
+  onReschedule,
+  onCancel,
+}: {
+  reservation: ReservationResponse;
+  past: boolean;
+  onReschedule?: () => void;
+  onCancel?: () => void;
+}) {
   const day = dayKey(reservation.startAt);
   const tone = past ? 'bg-[#ecefe9] text-[#66716c] border-[#d4d9d3]' : 'bg-[#e6f0ef] text-[#005146] border-[#b8d4d1]';
   return (
@@ -36,12 +46,43 @@ function ReservationCard({ reservation, past }: { reservation: ReservationRespon
         <p className="text-[#66716c] text-[13px] mt-1">
           {reservation.durationMinutes} min · <span className="text-[#005146] font-semibold">{cop(reservation.totalPrice)}</span>
         </p>
+
+        {!past && (
+          <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[#ecefe9]">
+            <button
+              type="button"
+              onClick={onReschedule}
+              className="text-[12px] font-semibold text-[#005146] bg-[#e6f0ef] hover:bg-[#d5e7e5] px-3 py-1.5 rounded-[6px] transition-colors cursor-pointer border border-[#b8d4d1]"
+            >
+              Reprogramar cita
+            </button>
+            <button
+              type="button"
+              onClick={onCancel}
+              className="text-[12px] font-semibold text-[#d94f41] hover:bg-[#fdf1f0] px-3 py-1.5 rounded-[6px] transition-colors cursor-pointer border border-transparent hover:border-[#f2bfbb]"
+            >
+              Cancelar cita
+            </button>
+          </div>
+        )}
       </div>
     </li>
   );
 }
 
-function Section({ title, reservations, past }: { title: string; reservations: ReservationResponse[]; past: boolean }) {
+function Section({
+  title,
+  reservations,
+  past,
+  onReschedule,
+  onCancel,
+}: {
+  title: string;
+  reservations: ReservationResponse[];
+  past: boolean;
+  onReschedule?: () => void;
+  onCancel?: () => void;
+}) {
   return (
     <section className="flex flex-col gap-3">
       <h2 className="text-[#18211e] text-[18px] font-bold">
@@ -49,7 +90,13 @@ function Section({ title, reservations, past }: { title: string; reservations: R
       </h2>
       <ul className="flex flex-col gap-3">
         {reservations.map((r) => (
-          <ReservationCard key={r.id} reservation={r} past={past} />
+          <ReservationCard
+            key={r.id}
+            reservation={r}
+            past={past}
+            onReschedule={onReschedule}
+            onCancel={onCancel}
+          />
         ))}
       </ul>
     </section>
@@ -128,7 +175,7 @@ export default function MisReservas() {
         ) : (
           <>
             {upcoming.length ? (
-              <Section title="Próximas citas" reservations={upcoming} past={false} />
+              <Section title="Próximas citas" reservations={upcoming} past={false} onReschedule={() => navigate('reprogramar-reserva')} onCancel={() => navigate('cancelar-reserva-cliente')} />
             ) : (
               <EmptyState
                 variant="dashed"
