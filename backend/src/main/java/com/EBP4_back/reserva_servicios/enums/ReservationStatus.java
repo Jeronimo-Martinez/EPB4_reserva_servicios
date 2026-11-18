@@ -2,5 +2,8 @@ package com.EBP4_back.reserva_servicios.enums;
 
 public enum ReservationStatus {
     PENDIENTE,
-    CONFIRMADA
+    CONFIRMADA,
+    CANCELADA,
+    ATENDIDA,
+    NO_ASISTIDA
 }
