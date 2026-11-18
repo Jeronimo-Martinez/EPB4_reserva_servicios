@@ -3,7 +3,9 @@ import { NavBar } from '@/components/layout';
 import { EmptyState } from '@/components/ui';
 import { useAuth } from '@/context/AuthContext';
 import { ApiError } from '@/api/client';
-import { ReservationResponse, fetchMyReservations } from '@/api/reservations';
+import { ReservationResponse, ReservationStatus, fetchMyReservations } from '@/api/reservations';
+import { StatusFilterChips } from './StatusFilterChips';
+import { statusMeta } from './reservationStatus';
 import { cop, dayKey, fmt, hhmm, longDate } from '@/utils/dates';
 
 const calendarIcon = (
@@ -26,6 +28,7 @@ function ReservationCard({
 }) {
   const day = dayKey(reservation.startAt);
   const tone = past ? 'bg-[#ecefe9] text-[#66716c] border-[#d4d9d3]' : 'bg-[#e6f0ef] text-[#005146] border-[#b8d4d1]';
+  const badge = statusMeta(reservation.status, past);
   return (
     <li className="bg-[#fcfcf8] border border-[#d4d9d3] rounded-[12px] shadow-xs p-4 sm:p-5 flex gap-4 items-start">
       <div className={`w-14 shrink-0 rounded-[10px] border py-2 text-center ${tone}`} aria-hidden="true">
@@ -35,8 +38,8 @@ function ReservationCard({
       <div className="flex-1 min-w-0">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <h3 className="text-[#18211e] text-[16px] font-bold leading-snug">{reservation.serviceName}</h3>
-          <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${tone}`}>
-            {past ? 'Finalizada' : 'Confirmada'}
+          <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${badge.tone}`}>
+            {badge.label}
           </span>
         </div>
         <p className="text-[#66716c] text-[13px] mt-0.5">{reservation.businessName}</p>
@@ -108,18 +111,19 @@ export default function MisReservas() {
   const [reservations, setReservations] = useState<ReservationResponse[] | null>(null);
   const [error, setError] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
+  const [statusFilter, setStatusFilter] = useState<ReservationStatus | ''>('');
 
   useEffect(() => {
     let current = true;
     setError('');
     setReservations(null);
-    fetchMyReservations()
+    fetchMyReservations(statusFilter || undefined)
       .then((data) => current && setReservations(data))
       .catch((err: unknown) => current && setError(err instanceof ApiError ? err.message : 'Intenta de nuevo.'));
     return () => {
       current = false;
     };
-  }, [reloadKey]);
+  }, [reloadKey, statusFilter]);
 
   // A reservation in progress still counts as upcoming until it ends.
   const now = Date.now();
@@ -137,7 +141,7 @@ export default function MisReservas() {
               Tus Citas
             </span>
             <h1 className="text-[26px] md:text-[30px] font-bold text-[#18211e] tracking-tight">Mis Reservas</h1>
-            <p className="text-[#66716c] text-[14px] mt-1">Consulta los detalles de tus reservas confirmadas.</p>
+            <p className="text-[#66716c] text-[14px] mt-1">Consulta el detalle de tus reservas y filtra por estado.</p>
           </div>
           <button
             type="button"
@@ -152,6 +156,8 @@ export default function MisReservas() {
           </button>
         </div>
 
+        <StatusFilterChips value={statusFilter} onChange={setStatusFilter} />
+
         {error ? (
           <EmptyState
             title="No pudimos cargar tus reservas"
@@ -165,6 +171,15 @@ export default function MisReservas() {
             <p className="mt-3 text-[#66716c] text-[14px]">Cargando tus reservas...</p>
           </div>
         ) : reservations.length === 0 ? (
+          statusFilter ? (
+            <EmptyState
+              icon={calendarIcon}
+              title="Nada por aquí con ese filtro"
+              description="No tienes reservas con ese estado. Prueba con otro filtro o quítalo para ver todas."
+              actionText="Quitar filtro"
+              onAction={() => setStatusFilter('')}
+            />
+          ) : (
           <EmptyState
             icon={calendarIcon}
             title="Aún no tienes citas agendadas"
@@ -172,6 +187,7 @@ export default function MisReservas() {
             actionText="Explorar catálogo de servicios"
             onAction={() => navigate('catalogo')}
           />
+          )
         ) : (
           <>
             {upcoming.length ? (

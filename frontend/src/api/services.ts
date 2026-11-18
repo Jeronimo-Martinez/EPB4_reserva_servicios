@@ -117,7 +117,13 @@ export async function fetchAvailability(
 }
 
 /** Negocios cuyo nombre, categoría, descripción, dirección o alguno de sus servicios contiene `search`; sin término, todos. */
-export async function searchBusinesses(search?: string): Promise<BusinessDetail[]> {
-  const qs = search?.trim() ? `?search=${encodeURIComponent(search.trim())}` : '';
-  return request<BusinessDetail[]>(`/api/v1/catalog/businesses${qs}`);
+export async function searchBusinesses(
+  search?: string,
+  category?: string
+): Promise<BusinessDetail[]> {
+  const params = new URLSearchParams();
+  if (search?.trim()) params.set('search', search.trim());
+  if (category && category !== 'Todas') params.set('category', category);
+  const qs = params.toString();
+  return request<BusinessDetail[]>(`/api/v1/catalog/businesses${qs ? `?${qs}` : ''}`);
 }
