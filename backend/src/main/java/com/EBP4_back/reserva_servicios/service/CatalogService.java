@@ -86,11 +86,9 @@ public class CatalogService {
     }
 
     @Transactional(readOnly = true)
-    public List<BusinessDetailResponse> searchBusinesses(String search, String category) {
+    public List<BusinessDetailResponse> searchBusinesses(String search) {
         String term = normalize(search);
-        String categoryTerm = normalize(category);
-        return businessRepository.search(term == null ? "" : term, categoryTerm == null ? "" : categoryTerm).stream()
-                .map(this::toDetail).toList();
+        return businessRepository.search(term == null ? "" : term).stream().map(this::toDetail).toList();
     }
 
     private BusinessDetailResponse toDetail(Business business) {

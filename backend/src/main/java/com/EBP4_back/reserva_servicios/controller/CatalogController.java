@@ -49,9 +49,8 @@ public class CatalogController {
     }
 
     @GetMapping("/businesses")
-    public List<BusinessDetailResponse> businesses(@RequestParam(value = "search", required = false) String search,
-            @RequestParam(value = "category", required = false) String category) {
-        return catalogService.searchBusinesses(search, category);
+    public List<BusinessDetailResponse> businesses(@RequestParam(value = "search", required = false) String search) {
+        return catalogService.searchBusinesses(search);
     }
 
     @GetMapping("/businesses/{id}")

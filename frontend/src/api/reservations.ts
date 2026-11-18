@@ -1,16 +1,9 @@
 import { request } from '@/api/client';
 
-export type ReservationStatus =
-  | 'PENDIENTE'
-  | 'CONFIRMADA'
-  | 'CANCELADA'
-  | 'ATENDIDA'
-  | 'NO_ASISTIDA';
-
 export interface ReservationResponse {
   message: string | null;
   id: string;
-  status: ReservationStatus;
+  status: 'PENDIENTE' | 'CONFIRMADA';
   businessName: string;
   serviceName: string;
   durationMinutes: number;
@@ -22,10 +15,9 @@ export interface ReservationResponse {
   holdExpiresAt: string | null;
 }
 
-/** Reservas del cliente con sesión (el backend lo identifica por el token), por fecha ascendente. */
-export async function fetchMyReservations(status?: ReservationStatus): Promise<ReservationResponse[]> {
-  const qs = status ? `?status=${status}` : '';
-  return request<ReservationResponse[]>(`/api/v1/reservations${qs}`);
+/** Reservas confirmadas del cliente con sesión (el backend lo identifica por el token), por fecha ascendente. */
+export async function fetchMyReservations(): Promise<ReservationResponse[]> {
+  return request<ReservationResponse[]>('/api/v1/reservations');
 }
 
 /** Bloquea el horario por unos minutos mientras el cliente revisa y confirma. 409 si otro cliente ya lo tomó. */
