@@ -70,10 +70,26 @@ public class ReservationService {
     }
 
     // "Mis reservas": the client id comes from the session token, so other clients' reservations are never listed.
+    // An abandoned hold (PENDIENTE past its expiry) is not a reservation and stays hidden.
     @Transactional(readOnly = true)
-    public List<ReservationResponse> listOwn(UUID clientId) {
-        return reservationRepository.findAllByClientIdAndStatusOrderByStartAtAsc(clientId, ReservationStatus.CONFIRMADA)
-                .stream().map(reservation -> toResponse(reservation, null)).toList();
+    public List<ReservationResponse> listOwn(UUID clientId, String status) {
+        ReservationStatus filter = parseStatus(status);
+        Instant now = Instant.now();
+        return reservationRepository.findAllByClientIdOrderByStartAtAsc(clientId).stream()
+                .filter(reservation -> !reservation.isHoldExpired(now))
+                .filter(reservation -> filter == null || reservation.getStatus() == filter)
+                .map(reservation -> toResponse(reservation, null)).toList();
+    }
+
+    private ReservationStatus parseStatus(String status) {
+        if (status == null || status.isBlank()) {
+            return null;
+        }
+        try {
+            return ReservationStatus.valueOf(status.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Estado de reserva no valido");
+        }
     }
 
     @Transactional(readOnly = true)
