@@ -5,6 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import { ApiError } from '@/api/client';
 import { ReservationResponse, fetchMyReservations } from '@/api/reservations';
 import { cop, dayKey, fmt, hhmm, longDate } from '@/utils/dates';
+import ReprogramarReserva from './ReprogramarReserva';
 
 const calendarIcon = (
   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -13,9 +14,22 @@ const calendarIcon = (
   </svg>
 );
 
-function ReservationCard({ reservation, past }: { reservation: ReservationResponse; past: boolean }) {
+const TONES = {
+  active: 'bg-[#e6f0ef] text-[#005146] border-[#b8d4d1]',
+  past: 'bg-[#ecefe9] text-[#66716c] border-[#d4d9d3]',
+  cancelled: 'bg-[#fdf1f0] text-[#b23b2e] border-[#f3c4be]',
+};
+
+interface CardProps {
+  reservation: ReservationResponse;
+  past: boolean;
+  onReschedule: (r: ReservationResponse) => void;
+}
+
+function ReservationCard({ reservation, past, onReschedule }: CardProps) {
   const day = dayKey(reservation.startAt);
-  const tone = past ? 'bg-[#ecefe9] text-[#66716c] border-[#d4d9d3]' : 'bg-[#e6f0ef] text-[#005146] border-[#b8d4d1]';
+  const cancelled = reservation.status === 'CANCELADA';
+  const tone = cancelled ? TONES.cancelled : past ? TONES.past : TONES.active;
   return (
     <li className="bg-[#fcfcf8] border border-[#d4d9d3] rounded-[12px] shadow-xs p-4 sm:p-5 flex gap-4 items-start">
       <div className={`w-14 shrink-0 rounded-[10px] border py-2 text-center ${tone}`} aria-hidden="true">
@@ -24,9 +38,11 @@ function ReservationCard({ reservation, past }: { reservation: ReservationRespon
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex flex-wrap items-start justify-between gap-2">
-          <h3 className="text-[#18211e] text-[16px] font-bold leading-snug">{reservation.serviceName}</h3>
+          <h3 className={`text-[16px] font-bold leading-snug ${cancelled ? 'text-[#66716c] line-through' : 'text-[#18211e]'}`}>
+            {reservation.serviceName}
+          </h3>
           <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${tone}`}>
-            {past ? 'Finalizada' : 'Confirmada'}
+            {cancelled ? 'Cancelada' : past ? 'Finalizada' : 'Confirmada'}
           </span>
         </div>
         <p className="text-[#66716c] text-[13px] mt-0.5">{reservation.businessName}</p>
@@ -36,12 +52,25 @@ function ReservationCard({ reservation, past }: { reservation: ReservationRespon
         <p className="text-[#66716c] text-[13px] mt-1">
           {reservation.durationMinutes} min · <span className="text-[#005146] font-semibold">{cop(reservation.totalPrice)}</span>
         </p>
+        {cancelled && (
+          <p className="mt-3 rounded-[8px] bg-[#fdf1f0] px-3 py-2 text-[12px] text-[#b23b2e]">
+            {reservation.cancelledBy === 'PROVEEDOR' ? 'Cancelada por el proveedor' : 'Reserva cancelada'}
+            {reservation.cancellationReason ? `: ${reservation.cancellationReason}` : '.'}
+          </p>
+        )}
+        <button
+          type="button"
+          onClick={() => onReschedule(reservation)}
+          className="mt-3 border border-[#005146] text-[#005146] hover:bg-[#e6f0ef] font-semibold text-[13px] px-3.5 py-1.5 rounded-[8px] transition-colors cursor-pointer bg-transparent"
+        >
+          Reprogramar reserva
+        </button>
       </div>
     </li>
   );
 }
 
-function Section({ title, reservations, past }: { title: string; reservations: ReservationResponse[]; past: boolean }) {
+function Section({ title, reservations, past, onReschedule }: Omit<CardProps, 'reservation'> & { title: string; reservations: ReservationResponse[] }) {
   return (
     <section className="flex flex-col gap-3">
       <h2 className="text-[#18211e] text-[18px] font-bold">
@@ -49,7 +78,7 @@ function Section({ title, reservations, past }: { title: string; reservations: R
       </h2>
       <ul className="flex flex-col gap-3">
         {reservations.map((r) => (
-          <ReservationCard key={r.id} reservation={r} past={past} />
+          <ReservationCard key={r.id} reservation={r} past={past} onReschedule={onReschedule} />
         ))}
       </ul>
     </section>
@@ -57,10 +86,18 @@ function Section({ title, reservations, past }: { title: string; reservations: R
 }
 
 export default function MisReservas() {
-  const { navigate } = useAuth();
+  const { navigate, showNotification } = useAuth();
   const [reservations, setReservations] = useState<ReservationResponse[] | null>(null);
   const [error, setError] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
+  const [rescheduling, setRescheduling] = useState<ReservationResponse | null>(null);
+
+  // HU-19, escenarios 3 y 4: the option is there, but a past or cancelled reservation cannot be moved.
+  const startReschedule = (r: ReservationResponse) => {
+    if (r.status === 'CANCELADA') showNotification('error', 'No puedes reprogramar una reserva cancelada.');
+    else if (new Date(r.startAt).getTime() <= Date.now()) showNotification('error', 'No puedes reprogramar una reserva que ya pasó.');
+    else setRescheduling(r);
+  };
 
   useEffect(() => {
     let current = true;
@@ -79,6 +116,20 @@ export default function MisReservas() {
   const upcoming = reservations?.filter((r) => new Date(r.endAt).getTime() > now) ?? [];
   const past = reservations?.filter((r) => new Date(r.endAt).getTime() <= now).reverse() ?? [];
 
+  if (rescheduling) {
+    return (
+      <ReprogramarReserva
+        reservation={rescheduling}
+        onCancel={() => setRescheduling(null)}
+        onDone={(updated) => {
+          setRescheduling(null);
+          setReloadKey((k) => k + 1);
+          showNotification('success', `Reserva reprogramada para el ${longDate(dayKey(updated.startAt))} a las ${hhmm(updated.startAt)}.`);
+        }}
+      />
+    );
+  }
+
   return (
     <div className="bg-[#f2f3ee] min-h-screen flex flex-col">
       <NavBar />
@@ -90,7 +141,7 @@ export default function MisReservas() {
               Tus Citas
             </span>
             <h1 className="text-[26px] md:text-[30px] font-bold text-[#18211e] tracking-tight">Mis Reservas</h1>
-            <p className="text-[#66716c] text-[14px] mt-1">Consulta los detalles de tus reservas confirmadas.</p>
+            <p className="text-[#66716c] text-[14px] mt-1">Consulta tus citas, reprográmalas o revisa si alguna fue cancelada.</p>
           </div>
           <button
             type="button"
@@ -128,7 +179,7 @@ export default function MisReservas() {
         ) : (
           <>
             {upcoming.length ? (
-              <Section title="Próximas citas" reservations={upcoming} past={false} />
+              <Section title="Próximas citas" reservations={upcoming} past={false} onReschedule={startReschedule} />
             ) : (
               <EmptyState
                 variant="dashed"
@@ -139,7 +190,7 @@ export default function MisReservas() {
                 onAction={() => navigate('catalogo')}
               />
             )}
-            {past.length > 0 && <Section title="Citas pasadas" reservations={past} past />}
+            {past.length > 0 && <Section title="Citas pasadas" reservations={past} past onReschedule={startReschedule} />}
           </>
         )}
       </main>

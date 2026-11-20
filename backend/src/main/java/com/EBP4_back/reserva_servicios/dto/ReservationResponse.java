@@ -15,5 +15,9 @@ public record ReservationResponse(
         Instant endAt,
         BigDecimal totalPrice,
         String currency,
-        Instant holdExpiresAt) {
+        Instant holdExpiresAt,
+        UUID serviceId,
+        // Only for CANCELADA: who cancelled (CLIENTE/PROVEEDOR) and the optional reason sent to the client.
+        String cancelledBy,
+        String cancellationReason) {
 }

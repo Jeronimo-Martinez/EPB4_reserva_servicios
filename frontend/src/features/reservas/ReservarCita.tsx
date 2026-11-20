@@ -9,7 +9,7 @@ import { capitalize, cop, dayKey, fmt, hhmm, longDate, shift, toDate } from '@/u
 
 type Step = 'seleccion' | 'confirmacion' | 'confirmada';
 
-interface Alert {
+export interface Alert {
   title: string;
   description: string;
 }
@@ -29,7 +29,7 @@ function weekLabel(week: string[]) {
     : `${monthName(first)} – ${monthName(last)} ${year}`;
 }
 
-function AlertBanner({ alert, onDismiss }: { alert: Alert; onDismiss: () => void }) {
+export function AlertBanner({ alert, onDismiss }: { alert: Alert; onDismiss: () => void }) {
   return (
     <div role="alert" className="flex items-start gap-3 bg-[#fdf1f0] border border-[#f3c4be] rounded-[10px] px-5 py-4">
       <div className="w-7 h-7 rounded-full bg-[#d94f41] text-white flex items-center justify-center shrink-0 text-[14px] font-bold">!</div>
@@ -101,7 +101,7 @@ function NoAvailability({ description, actionText, onAction }: { description: st
   );
 }
 
-function SummaryRows({ rows }: { rows: [string, string][] }) {
+export function SummaryRows({ rows }: { rows: [string, string][] }) {
   return (
     <dl className="flex flex-col">
       {rows.map(([label, value]) => (

@@ -3,7 +3,7 @@ import { request } from '@/api/client';
 export interface ReservationResponse {
   message: string | null;
   id: string;
-  status: 'PENDIENTE' | 'CONFIRMADA';
+  status: 'PENDIENTE' | 'CONFIRMADA' | 'CANCELADA';
   businessName: string;
   serviceName: string;
   durationMinutes: number;
@@ -13,9 +13,21 @@ export interface ReservationResponse {
   currency: string;
   /** Solo mientras la reserva es un bloqueo temporal (PENDIENTE). */
   holdExpiresAt: string | null;
+  serviceId: string;
+  /** Solo en reservas CANCELADA: quién la canceló y el motivo opcional. */
+  cancelledBy: 'CLIENTE' | 'PROVEEDOR' | null;
+  cancellationReason: string | null;
 }
 
-/** Reservas confirmadas del cliente con sesión (el backend lo identifica por el token), por fecha ascendente. */
+/** HU-19: mueve una reserva confirmada a otro horario libre. 409 si el horario ya no está libre o la reserva no se puede cambiar. */
+export async function rescheduleReservation(id: string, startAt: string): Promise<ReservationResponse> {
+  return request<ReservationResponse>(`/api/v1/reservations/${id}/reschedule`, {
+    method: 'POST',
+    body: JSON.stringify({ startAt }),
+  });
+}
+
+/** Reservas confirmadas y canceladas del cliente con sesión (el backend lo identifica por el token), por fecha ascendente. */
 export async function fetchMyReservations(): Promise<ReservationResponse[]> {
   return request<ReservationResponse[]>('/api/v1/reservations');
 }

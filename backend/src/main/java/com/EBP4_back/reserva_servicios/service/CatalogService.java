@@ -13,6 +13,7 @@ import com.EBP4_back.reserva_servicios.enums.ReservationStatus;
 import com.EBP4_back.reserva_servicios.enums.ServiceCategory;
 import com.EBP4_back.reserva_servicios.repository.BusinessRepository;
 import com.EBP4_back.reserva_servicios.repository.ReservationRepository;
+import com.EBP4_back.reserva_servicios.repository.ScheduleBlockRepository;
 import com.EBP4_back.reserva_servicios.repository.ServiceOfferingRepository;
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -42,12 +43,14 @@ public class CatalogService {
     private final ServiceOfferingRepository serviceRepository;
     private final BusinessRepository businessRepository;
     private final ReservationRepository reservationRepository;
+    private final ScheduleBlockRepository blockRepository;
 
     public CatalogService(ServiceOfferingRepository serviceRepository, BusinessRepository businessRepository,
-            ReservationRepository reservationRepository) {
+            ReservationRepository reservationRepository, ScheduleBlockRepository blockRepository) {
         this.serviceRepository = serviceRepository;
         this.businessRepository = businessRepository;
         this.reservationRepository = reservationRepository;
+        this.blockRepository = blockRepository;
     }
 
     @Transactional(readOnly = true)
@@ -114,14 +117,20 @@ public class CatalogService {
                 days.isEmpty() ? "El servicio no tiene disponibilidad proxima" : null, days);
     }
 
-    // A slot is offered when the whole service fits inside the opening hours and overlaps no reservation or active hold.
+    // A slot is offered when the whole service fits inside the opening hours and overlaps no reservation, active hold
+    // or provider block (HU-10).
     private List<AvailabilityResponse.Day> freeSlots(ServiceOffering service, LocalDate from, LocalDate to) {
         Business business = service.getBusiness();
         Instant now = Instant.now();
         Duration duration = Duration.ofMinutes(service.getDurationMinutes());
-        List<Reservation> busy = reservationRepository.findBlocking(business.getId(),
-                from.atStartOfDay(Business.ZONE).toInstant(), to.plusDays(1).atStartOfDay(Business.ZONE).toInstant(),
+        Instant rangeStart = from.atStartOfDay(Business.ZONE).toInstant();
+        Instant rangeEnd = to.plusDays(1).atStartOfDay(Business.ZONE).toInstant();
+        List<Reservation> reservations = reservationRepository.findBlocking(business.getId(), rangeStart, rangeEnd,
                 now, ReservationStatus.CONFIRMADA);
+        List<Instant[]> busy = Stream.concat(
+                reservations.stream().map(r -> new Instant[] {r.getStartAt(), r.getEndAt()}),
+                blockRepository.findOverlapping(business.getId(), rangeStart, rangeEnd).stream()
+                        .map(b -> new Instant[] {b.getStartAt(), b.getEndAt()})).toList();
         List<AvailabilityResponse.Day> days = new ArrayList<>();
         for (LocalDate date : from.datesUntil(to.plusDays(1)).toList()) {
             Optional<BusinessHours> hours = business.hoursFor(date.getDayOfWeek());
@@ -135,7 +144,7 @@ public class CatalogService {
                 Instant startAt = slot.toInstant();
                 Instant endAt = startAt.plus(duration);
                 if (startAt.isAfter(now) && busy.stream()
-                        .noneMatch(r -> r.getStartAt().isBefore(endAt) && r.getEndAt().isAfter(startAt))) {
+                        .noneMatch(period -> period[0].isBefore(endAt) && period[1].isAfter(startAt))) {
                     slots.add(startAt);
                 }
             }

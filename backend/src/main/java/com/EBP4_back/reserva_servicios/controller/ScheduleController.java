@@ -3,18 +3,25 @@ package com.EBP4_back.reserva_servicios.controller;
 import com.EBP4_back.reserva_servicios.dto.AgendaResponse;
 import com.EBP4_back.reserva_servicios.dto.BusinessHoursRequest;
 import com.EBP4_back.reserva_servicios.dto.BusinessHoursResponse;
+import com.EBP4_back.reserva_servicios.dto.CancelReservationRequest;
+import com.EBP4_back.reserva_servicios.dto.ScheduleBlockRequest;
 import com.EBP4_back.reserva_servicios.enums.AgendaView;
 import com.EBP4_back.reserva_servicios.security.AuthUser;
 import com.EBP4_back.reserva_servicios.service.ScheduleService;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
+import java.util.UUID;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -42,5 +49,18 @@ public class ScheduleController {
             @RequestParam(value = "view", defaultValue = "DIA") AgendaView view,
             @RequestParam(value = "date", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         return scheduleService.agenda(user.email(), view, date);
+    }
+
+    @PostMapping("/blocks")
+    @ResponseStatus(HttpStatus.CREATED)
+    public AgendaResponse.Block createBlock(@Valid @RequestBody ScheduleBlockRequest request,
+            @AuthenticationPrincipal AuthUser user) {
+        return scheduleService.createBlock(request, user.email());
+    }
+
+    @PostMapping("/reservations/{id}/cancel")
+    public AgendaResponse.Entry cancelReservation(@PathVariable UUID id,
+            @Valid @RequestBody CancelReservationRequest request, @AuthenticationPrincipal AuthUser user) {
+        return scheduleService.cancelReservation(id, request.reason(), user.email());
     }
 }

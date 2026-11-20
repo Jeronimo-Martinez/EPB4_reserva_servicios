@@ -3,6 +3,7 @@ package com.EBP4_back.reserva_servicios.repository;
 import com.EBP4_back.reserva_servicios.entity.Reservation;
 import com.EBP4_back.reserva_servicios.enums.ReservationStatus;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -26,5 +27,5 @@ public interface ReservationRepository extends JpaRepository<Reservation, UUID> 
     void deleteAllByClientEmailIgnoreCaseAndStatus(String email, ReservationStatus status);
 
     @EntityGraph(attributePaths = {"service", "service.business"})
-    List<Reservation> findAllByClientIdAndStatusOrderByStartAtAsc(UUID clientId, ReservationStatus status);
+    List<Reservation> findAllByClientIdAndStatusInOrderByStartAtAsc(UUID clientId, Collection<ReservationStatus> statuses);
 }

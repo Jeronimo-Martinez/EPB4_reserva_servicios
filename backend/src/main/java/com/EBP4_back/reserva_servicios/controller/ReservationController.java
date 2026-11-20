@@ -1,6 +1,7 @@
 package com.EBP4_back.reserva_servicios.controller;
 
 import com.EBP4_back.reserva_servicios.dto.ReservationHoldRequest;
+import com.EBP4_back.reserva_servicios.dto.RescheduleRequest;
 import com.EBP4_back.reserva_servicios.dto.ReservationResponse;
 import com.EBP4_back.reserva_servicios.security.AuthUser;
 import com.EBP4_back.reserva_servicios.service.ReservationService;
@@ -46,5 +47,11 @@ public class ReservationController {
     @PostMapping("/{id}/confirm")
     public ReservationResponse confirm(@PathVariable UUID id, @AuthenticationPrincipal AuthUser user) {
         return reservationService.confirm(id, user.email());
+    }
+
+    @PostMapping("/{id}/reschedule")
+    public ReservationResponse reschedule(@PathVariable UUID id, @Valid @RequestBody RescheduleRequest request,
+            @AuthenticationPrincipal AuthUser user) {
+        return reservationService.reschedule(id, request.startAt(), user.email());
     }
 }

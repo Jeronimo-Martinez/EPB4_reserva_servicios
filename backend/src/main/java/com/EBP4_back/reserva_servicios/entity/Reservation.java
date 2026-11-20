@@ -1,6 +1,7 @@
 package com.EBP4_back.reserva_servicios.entity;
 
 import com.EBP4_back.reserva_servicios.enums.ReservationStatus;
+import com.EBP4_back.reserva_servicios.enums.UserRole;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -13,6 +14,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -41,6 +43,14 @@ public class Reservation {
     private Instant holdExpiresAt;
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
+    // History of a cancellation (HU-20): who started it, why and when.
+    @Enumerated(EnumType.STRING)
+    @Column(name = "cancelled_by", length = 20)
+    private UserRole cancelledBy;
+    @Column(name = "cancellation_reason", length = 250)
+    private String cancellationReason;
+    @Column(name = "cancelled_at")
+    private Instant cancelledAt;
 
     protected Reservation() { }
 
@@ -64,6 +74,23 @@ public class Reservation {
         this.holdExpiresAt = null;
     }
 
+    /** A reservation that already started (or passed) can no longer be rescheduled or cancelled. */
+    public boolean hasStarted(Instant now) {
+        return !startAt.isAfter(now);
+    }
+
+    public void reschedule(Instant newStartAt) {
+        this.endAt = newStartAt.plus(Duration.between(startAt, endAt));
+        this.startAt = newStartAt;
+    }
+
+    public void cancel(UserRole by, String reason) {
+        this.status = ReservationStatus.CANCELADA;
+        this.cancelledBy = by;
+        this.cancellationReason = reason;
+        this.cancelledAt = Instant.now();
+    }
+
     public UUID getId() { return id; }
     public User getClient() { return client; }
     public ServiceOffering getService() { return service; }
@@ -72,4 +99,6 @@ public class Reservation {
     public BigDecimal getTotalPrice() { return totalPrice; }
     public ReservationStatus getStatus() { return status; }
     public Instant getHoldExpiresAt() { return holdExpiresAt; }
+    public UserRole getCancelledBy() { return cancelledBy; }
+    public String getCancellationReason() { return cancellationReason; }
 }

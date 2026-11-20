@@ -9,6 +9,7 @@ import {
   VerifyCodeResponse,
   ResendCodeDTO,
   ResendCodeResponse,
+  UserRole,
 } from '@/types/auth';
 
 export async function loginApi(credentials: LoginCredentials): Promise<LoginResponse> {
@@ -81,6 +82,25 @@ export async function resendCodeApi(
       email: data.email.trim().toLowerCase(),
     }),
   });
+}
+
+export interface ProfileData {
+  message: string | null;
+  firstName: string;
+  lastName: string | null;
+  /** Solo lectura: el correo verificado y el rol no se pueden cambiar (HU-05). */
+  email: string;
+  phone: string;
+  role: UserRole;
+  verified: boolean;
+}
+
+export async function fetchProfile(): Promise<ProfileData> {
+  return request<ProfileData>('/api/v1/profile');
+}
+
+export async function updateProfile(data: { firstName: string; lastName: string; phone: string }): Promise<ProfileData> {
+  return request<ProfileData>('/api/v1/profile', { method: 'PUT', body: JSON.stringify(data) });
 }
 
 /** Closes the session on the backend so the token stops working right away. */

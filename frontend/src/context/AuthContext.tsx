@@ -221,7 +221,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const updateUserProfile = (data: Partial<User>) => {
     setUser((prev) => (prev ? { ...prev, ...data } : null));
-    showNotification('success', 'Perfil actualizado correctamente.');
   };
 
   return (

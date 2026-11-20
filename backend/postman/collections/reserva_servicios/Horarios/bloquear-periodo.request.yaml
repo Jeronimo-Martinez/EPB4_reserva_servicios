@@ -1,0 +1,21 @@
+$kind: http-request
+name: Bloquear Periodo
+order: 4000
+method: POST
+url: '{{baseUrl}}/api/v1/schedule/blocks'
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "startDate": "2026-12-15",
+      "endDate": "2026-12-15",
+      "startTime": "13:00",
+      "endTime": "16:00",
+      "reason": "Asunto personal",
+      "confirmConflicts": false
+    }

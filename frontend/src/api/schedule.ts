@@ -44,7 +44,15 @@ export interface AgendaEntry {
   endAt: string;
   durationMinutes: number;
   /** CONFIRMADA = reserva; PENDIENTE = bloqueo temporal mientras un cliente completa su reserva. */
-  status: 'CONFIRMADA' | 'PENDIENTE';
+  status: 'CONFIRMADA' | 'PENDIENTE' | 'CANCELADA';
+}
+
+/** Periodo bloqueado por el proveedor (HU-10), recortado al horario de atención de ese día. */
+export interface AgendaBlock {
+  id: string;
+  startAt: string;
+  endAt: string;
+  reason: string | null;
 }
 
 export interface AgendaDay {
@@ -53,6 +61,7 @@ export interface AgendaDay {
   openTime: string | null;
   closeTime: string | null;
   reservations: AgendaEntry[];
+  blocks: AgendaBlock[];
 }
 
 export interface AgendaResponse {
@@ -67,4 +76,28 @@ export interface AgendaResponse {
 export async function fetchAgenda(view: AgendaView, date: string): Promise<AgendaResponse> {
   const params = new URLSearchParams({ view, date });
   return request<AgendaResponse>(`/api/v1/schedule/agenda?${params}`);
+}
+
+export interface BlockRequest {
+  startDate: string;
+  endDate: string;
+  /** Sin horas se bloquean los días completos. */
+  startTime: string | null;
+  endTime: string | null;
+  reason: string | null;
+  /** true cuando el proveedor ya aceptó la advertencia de reservas afectadas. */
+  confirmConflicts: boolean;
+}
+
+/** HU-10. 428 = el periodo incluye reservas (mostrar la advertencia y reenviar con confirmConflicts); 409 = ya estaba bloqueado. */
+export async function createBlock(block: BlockRequest): Promise<AgendaBlock> {
+  return request<AgendaBlock>('/api/v1/schedule/blocks', { method: 'POST', body: JSON.stringify(block) });
+}
+
+/** HU-20. El motivo es opcional y se envía al cliente. */
+export async function cancelReservationByProvider(id: string, reason: string): Promise<AgendaEntry> {
+  return request<AgendaEntry>(`/api/v1/schedule/reservations/${id}/cancel`, {
+    method: 'POST',
+    body: JSON.stringify({ reason: reason.trim() || null }),
+  });
 }
