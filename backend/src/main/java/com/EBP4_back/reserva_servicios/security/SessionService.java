@@ -34,6 +34,8 @@ public class SessionService {
         byte[] bytes = new byte[32];
         RANDOM.nextBytes(bytes);
         String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+        // Expired sessions are only removed by logout otherwise, so the table would grow with every login.
+        sessions.deleteAllByExpiresAtBefore(Instant.now());
         sessions.save(new AuthSession(hash(token), user, Instant.now().plus(lifetime)));
         return token;
     }

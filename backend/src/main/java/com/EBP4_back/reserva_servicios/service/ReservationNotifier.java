@@ -28,9 +28,9 @@ public class ReservationNotifier {
 
     public void notifyProvider(Reservation reservation) {
         send(providerEmail(reservation), "Nueva reserva en ProMarket",
-                "Nueva reserva confirmada: %s para %s el %s (id %s)".formatted(
+                "Nueva reserva confirmada: %s para %s el %s (hora Colombia) (id %s)".formatted(
                         reservation.getClient().getEmail(), reservation.getService().getName(),
-                        reservation.getStartAt(), reservation.getId()));
+                        WHEN.format(reservation.getStartAt()), reservation.getId()));
     }
 
     /** HU-19: the provider learns both the previous and the new time. */

@@ -3,7 +3,7 @@ import { NavBar, ProviderAside } from '@/components/layout';
 import { SuccessBanner, EmptyState } from '@/components/ui';
 import ServicioCard from './components/ServicioCard';
 import FormServicio from './components/FormServicio';
-import { Servicio, FormServicio as FormServicioType, DEMO_SERVICIOS } from './types';
+import { Servicio, FormServicio as FormServicioType } from './types';
 import { useAuth } from '@/context/AuthContext';
 import {
   fetchProviderServices,
@@ -31,7 +31,7 @@ function mapBackendToServicio(res: ServiceOfferingResponse): Servicio {
 export default function GestionServicios() {
   const { user, showNotification } = useAuth();
   const [view, setView] = useState<View>('lista');
-  const [servicios, setServicios] = useState<Servicio[]>(DEMO_SERVICIOS);
+  const [servicios, setServicios] = useState<Servicio[]>([]);
   const [editando, setEditando] = useState<Servicio | null>(null);
   const [showBanner, setShowBanner] = useState(false);
   const [bannerMsg, setBannerMsg] = useState('');
@@ -52,8 +52,7 @@ export default function GestionServicios() {
       if (err instanceof ApiError && err.status === 404) {
         setServicios([]);
       } else {
-        console.error('Error loading services', err);
-        setServicios(DEMO_SERVICIOS);
+        showNotification('error', err instanceof ApiError ? err.message : 'No se pudieron cargar tus servicios.');
       }
     } finally {
       setLoadingServices(false);

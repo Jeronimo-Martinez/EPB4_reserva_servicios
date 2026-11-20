@@ -15,6 +15,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "verification_codes")
 public class VerificationCode {
+    private static final int MAX_FAILED_ATTEMPTS = 5;
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
@@ -27,6 +28,9 @@ public class VerificationCode {
     private Instant expiresAt;
     @Column(name = "is_used", nullable = false)
     private boolean used;
+    // Nullable so ddl-auto=update can add the column to rows that already exist; null means no wrong guesses yet.
+    @Column(name = "failed_attempts")
+    private Integer failedAttempts;
 
     protected VerificationCode() { }
 
@@ -41,5 +45,17 @@ public class VerificationCode {
         return !used && expiresAt.isAfter(now) && code.equals(candidate);
     }
     public void markUsed() { this.used = true; }
+
+    /**
+     * Counts a wrong guess. After MAX_FAILED_ATTEMPTS the code dies, so guessing a 6-digit code needs new codes,
+     * and those are limited per hour. Returns true when this guess killed the code.
+     */
+    public boolean recordFailure() {
+        failedAttempts = (failedAttempts == null ? 0 : failedAttempts) + 1;
+        if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
+            used = true;
+        }
+        return used;
+    }
     public String getCode() { return code; }
 }

@@ -192,8 +192,8 @@ export default function RegistroProveedor() {
       await resendCode(contacto.email.trim().toLowerCase());
       setResentMessage('Código reenviado exitosamente a tu correo.');
       showNotification('success', 'Código reenviado a tu correo electrónico.');
-    } catch {
-      setResentMessage('No se pudo reenviar el código. Intenta de nuevo.');
+    } catch (err: unknown) {
+      setResentMessage(err instanceof ApiError ? err.message : 'No se pudo reenviar el código. Intenta de nuevo.');
     }
   };
 

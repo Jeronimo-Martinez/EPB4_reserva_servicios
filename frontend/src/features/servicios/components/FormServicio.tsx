@@ -4,7 +4,6 @@ import { Toggle } from "@/components/ui";
 import {
   Servicio,
   FormServicio as FormServicioType,
-  CATEGORIAS_SERVICIO,
   CATEGORIAS_SERVICIO_LABELS,
   DURACIONES_SERVICIO,
   fmtDuracion,
@@ -93,7 +92,7 @@ export default function FormServicio({ editing, onSave, onCancel }: FormServicio
           hint="Este nombre aparecerá en el catálogo visible para los clientes." />
         <SelectField label="Categoría" value={form.categoria}
           onChange={set("categoria") as (v: string) => void}
-          options={CATEGORIAS_SERVICIO.map((c) => ({ value: c, label: CATEGORIAS_SERVICIO_LABELS[c] || c }))}
+          options={Object.values(CATEGORIAS_SERVICIO_LABELS).map((label) => ({ value: label, label }))}
           placeholder="Selecciona una categoría..." error={errors.categoria} />
         <TextareaField label="Descripción (opcional)" value={form.descripcion}
           onChange={set("descripcion") as (v: string) => void}

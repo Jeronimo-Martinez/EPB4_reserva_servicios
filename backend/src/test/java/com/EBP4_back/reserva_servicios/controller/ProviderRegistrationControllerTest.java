@@ -52,13 +52,22 @@ class ProviderRegistrationControllerTest {
     }
 
     @Test
-    void rejectsDuplicateEmail() throws Exception {
+    void replacesAnUnverifiedRegistrationAndRejectsAVerifiedDuplicate() throws Exception {
         String email = "dupe." + System.nanoTime() + "@example.com";
         mockMvc.perform(post("/api/v1/registrations/provider").contentType(MediaType.APPLICATION_JSON)
                         .content(providerBody(email, "Proveedor123", true, "Centro Dup", "Belleza")))
                 .andExpect(status().isCreated());
         mockMvc.perform(post("/api/v1/registrations/provider").contentType(MediaType.APPLICATION_JSON)
                         .content(providerBody(email, "Proveedor123", true, "Centro Dup 2", "Belleza")))
+                .andExpect(status().isCreated());
+
+        String code = codes.findTopByUserEmailIgnoreCaseAndUsedFalseOrderByExpiresAtDesc(email).orElseThrow().getCode();
+        mockMvc.perform(post("/api/v1/registrations/verify").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"" + email + "\",\"code\":\"" + code + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.businessName").value("Centro Dup 2"));
+        mockMvc.perform(post("/api/v1/registrations/provider").contentType(MediaType.APPLICATION_JSON)
+                        .content(providerBody(email, "Proveedor123", true, "Centro Dup 3", "Belleza")))
                 .andExpect(status().isConflict());
     }
 

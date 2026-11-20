@@ -144,8 +144,8 @@ export default function RegistroCliente() {
     try {
       await resendCode(form.email.trim().toLowerCase());
       setResentMessage('Código reenviado exitosamente a tu correo.');
-    } catch {
-      setResentMessage('No se pudo reenviar el código. Intenta de nuevo.');
+    } catch (err: unknown) {
+      setResentMessage(err instanceof ApiError ? err.message : 'No se pudo reenviar el código. Intenta de nuevo.');
     }
   };
 

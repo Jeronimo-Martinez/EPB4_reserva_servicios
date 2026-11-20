@@ -86,12 +86,24 @@ class ServiceCatalogControllerTest {
     }
 
     @Test
-    void listsCategoriesAndEmptyProviderList() throws Exception {
-        mockMvc.perform(get("/api/v1/services/categories"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].code").exists())
-                .andExpect(jsonPath("$[0].label").exists());
+    void storesTheCategoryLabelSoTheCatalogFilterFindsIt() throws Exception {
+        // The provider form sends the code (EDUCACION); the catalog filters by the label.
+        String name = "Clase Guitarra " + System.nanoTime();
+        mockMvc.perform(post("/api/v1/services").header("Authorization", bearer(PROVIDER_EMAIL)).contentType(MediaType.APPLICATION_JSON)
+                        .content(serviceBody(name, 60, "40000.00", true).replace("Belleza", "EDUCACION")))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.category").value("Educacion"));
+        mockMvc.perform(get("/api/v1/catalog").param("category", "Educacion"))
+                .andExpect(jsonPath("$.items[?(@.name=='" + name + "')].category").value("Educacion"));
 
+        mockMvc.perform(post("/api/v1/services").header("Authorization", bearer(PROVIDER_EMAIL)).contentType(MediaType.APPLICATION_JSON)
+                        .content(serviceBody("Sin categoria", 60, "40000.00", true).replace("Belleza", "Inventada")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("La categoria del servicio no es valida"));
+    }
+
+    @Test
+    void listsAnEmptyProviderList() throws Exception {
         User withoutServices = new User("Sin", "Servicios", "sin.servicios." + System.nanoTime() + "@example.com",
                 "+573001112233", "hash", UserRole.PROVEEDOR, true);
         mockMvc.perform(get("/api/v1/services").header("Authorization", bearer(users.save(withoutServices).getEmail())))
