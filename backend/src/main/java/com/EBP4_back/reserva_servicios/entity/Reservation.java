@@ -64,6 +64,13 @@ public class Reservation {
         this.holdExpiresAt = null;
     }
 
+    // A cancelled reservation keeps no hold: findBlocking only blocks CONFIRMADA rows and live holds,
+    // so the slot is free again without touching anything else.
+    public void cancel() {
+        this.status = ReservationStatus.CANCELADA;
+        this.holdExpiresAt = null;
+    }
+
     public UUID getId() { return id; }
     public User getClient() { return client; }
     public ServiceOffering getService() { return service; }

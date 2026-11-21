@@ -1,5 +1,6 @@
 import { useState } from "react"
-import { NavBar, SideNav } from "@/components/layout"
+import { useAuth } from "@/context/AuthContext"
+import { NavBar, ProviderAside } from "@/components/layout"
 import { SuccessBanner } from "@/components/ui"
 
 type Status = "Pendiente" | "Atendida" | "No asistió" | "Cancelada"
