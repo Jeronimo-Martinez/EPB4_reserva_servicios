@@ -8,7 +8,6 @@ import CancelReservationDialog from './CancelReservationDialog';
 import { StatusFilterChips } from './StatusFilterChips';
 import { statusMeta } from './reservationStatus';
 import { cop, dayKey, fmt, hhmm, longDate } from '@/utils/dates';
-import ReprogramarReserva from './ReprogramarReserva';
 
 const calendarIcon = (
   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -20,19 +19,20 @@ const calendarIcon = (
 function ReservationCard({
   reservation,
   past,
-  onReschedule,
   onCancel,
 }: {
   reservation: ReservationResponse;
   past: boolean;
-  onReschedule?: () => void;
   onCancel?: (reservation: ReservationResponse) => void;
 }) {
+  const { openReservation } = useAuth();
   const day = dayKey(reservation.startAt);
   const tone = past ? 'bg-[#ecefe9] text-[#66716c] border-[#d4d9d3]' : 'bg-[#e6f0ef] text-[#005146] border-[#b8d4d1]';
   const badge = statusMeta(reservation.status);
-  // Reprogramar/cancelar solo tiene sentido mientras la cita siga viva y por venir.
+  // Reprogramar/cancelar solo tiene sentido mientras la cita siga viva y por venir; reprogramar, solo si está
+  // confirmada (HU-19). Las pasadas o canceladas abren el detalle, donde el backend explica por qué no se puede.
   const canAct = !past && (reservation.status === 'PENDIENTE' || reservation.status === 'CONFIRMADA');
+  const canReschedule = canAct && reservation.status === 'CONFIRMADA';
   return (
     <li className="bg-[#fcfcf8] border border-[#d4d9d3] rounded-[12px] shadow-xs p-4 sm:p-5 flex gap-4 items-start">
       <div className={`w-14 shrink-0 rounded-[10px] border py-2 text-center ${tone}`} aria-hidden="true">
@@ -54,15 +54,17 @@ function ReservationCard({
           {reservation.durationMinutes} min · <span className="text-[#005146] font-semibold">{cop(reservation.totalPrice)}</span>
         </p>
 
-        {canAct && (
-          <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[#ecefe9]">
+        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[#ecefe9]">
+          {canReschedule && (
             <button
               type="button"
-              onClick={onReschedule}
+              onClick={() => openReservation(reservation)}
               className="text-[12px] font-semibold text-[#005146] bg-[#e6f0ef] hover:bg-[#d5e7e5] px-3 py-1.5 rounded-[6px] transition-colors cursor-pointer border border-[#b8d4d1]"
             >
               Reprogramar cita
             </button>
+          )}
+          {canAct ? (
             <button
               type="button"
               onClick={() => onCancel?.(reservation)}
@@ -70,8 +72,16 @@ function ReservationCard({
             >
               Cancelar cita
             </button>
-          </div>
-        )}
+          ) : (
+            <button
+              type="button"
+              onClick={() => openReservation(reservation)}
+              className="text-[12px] font-semibold text-[#005146] hover:underline px-1 py-1.5 bg-transparent cursor-pointer"
+            >
+              Ver detalle
+            </button>
+          )}
+        </div>
       </div>
     </li>
   );
@@ -81,13 +91,11 @@ function Section({
   title,
   reservations,
   past,
-  onReschedule,
   onCancel,
 }: {
   title: string;
   reservations: ReservationResponse[];
   past: boolean;
-  onReschedule?: () => void;
   onCancel?: (reservation: ReservationResponse) => void;
 }) {
   return (
@@ -101,7 +109,6 @@ function Section({
             key={r.id}
             reservation={r}
             past={past}
-            onReschedule={onReschedule}
             onCancel={onCancel}
           />
         ))}
@@ -134,20 +141,6 @@ export default function MisReservas() {
   const now = Date.now();
   const upcoming = reservations?.filter((r) => new Date(r.endAt).getTime() > now) ?? [];
   const past = reservations?.filter((r) => new Date(r.endAt).getTime() <= now).reverse() ?? [];
-
-  if (rescheduling) {
-    return (
-      <ReprogramarReserva
-        reservation={rescheduling}
-        onCancel={() => setRescheduling(null)}
-        onDone={(updated) => {
-          setRescheduling(null);
-          setReloadKey((k) => k + 1);
-          showNotification('success', `Reserva reprogramada para el ${longDate(dayKey(updated.startAt))} a las ${hhmm(updated.startAt)}.`);
-        }}
-      />
-    );
-  }
 
   return (
     <div className="bg-[#f2f3ee] min-h-screen flex flex-col">
@@ -210,7 +203,7 @@ export default function MisReservas() {
         ) : (
           <>
             {upcoming.length ? (
-              <Section title="Próximas citas" reservations={upcoming} past={false} onReschedule={() => navigate('reprogramar-reserva')} onCancel={setCanceling} />
+              <Section title="Próximas citas" reservations={upcoming} past={false} onCancel={setCanceling} />
             ) : (
               <EmptyState
                 variant="dashed"
@@ -221,7 +214,7 @@ export default function MisReservas() {
                 onAction={() => navigate('catalogo')}
               />
             )}
-            {past.length > 0 && <Section title="Citas pasadas" reservations={past} past onReschedule={startReschedule} />}
+            {past.length > 0 && <Section title="Citas pasadas" reservations={past} past />}
           </>
         )}
       </main>

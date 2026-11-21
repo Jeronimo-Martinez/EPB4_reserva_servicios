@@ -61,7 +61,7 @@ export default function NavBar({ links: customLinks, trailing, avatarInitial: cu
       },
       {
         label: 'Mis Reservas',
-        active: currentView === 'reservas',
+        active: currentView === 'reservas' || currentView === 'reprogramar',
         onClick: () => navigate('reservas'),
       }
     );

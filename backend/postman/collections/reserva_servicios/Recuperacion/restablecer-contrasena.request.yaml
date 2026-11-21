@@ -1,0 +1,17 @@
+$kind: http-request
+name: Restablecer Contrasena
+order: 3000
+method: POST
+url: '{{baseUrl}}/api/v1/auth/password-recovery/reset'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "cliente.demo@example.com",
+      "code": "123456",
+      "newPassword": "Cliente456",
+      "confirmPassword": "Cliente456"
+    }

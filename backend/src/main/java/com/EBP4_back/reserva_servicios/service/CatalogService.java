@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -107,28 +108,47 @@ public class CatalogService {
 
     @Transactional(readOnly = true)
     public AvailabilityResponse availability(UUID serviceId, LocalDate from, LocalDate to) {
-        ServiceOffering service = requireService(serviceId);
+        return availability(requireService(serviceId), from, to, reservation -> false, null,
+                "El servicio no tiene disponibilidad proxima");
+    }
+
+    /**
+     * HU-19: horarios a los que se puede mover {@code reservation}. Su propio horario y el bloqueo temporal de su
+     * reprogramacion no cuentan como ocupados (se liberan al confirmar), pero el horario actual no se ofrece.
+     */
+    @Transactional(readOnly = true)
+    public AvailabilityResponse rescheduleAvailability(Reservation reservation, LocalDate from, LocalDate to) {
+        UUID id = reservation.getId();
+        return availability(reservation.getService(), from, to,
+                busy -> busy.getId().equals(id) || busy.isRescheduleOf(id), reservation.getStartAt(),
+                "No hay horarios disponibles");
+    }
+
+    private AvailabilityResponse availability(ServiceOffering service, LocalDate from, LocalDate to,
+            Predicate<Reservation> ignored, Instant excludedStart, String emptyMessage) {
         LocalDate start = from == null ? LocalDate.now(Business.ZONE) : from;
         LocalDate end = to == null ? start.plusDays(6) : to;
         if (end.isBefore(start) || ChronoUnit.DAYS.between(start, end) >= MAX_RANGE_DAYS) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "El rango de fechas no es valido (maximo " + MAX_RANGE_DAYS + " dias)");
         }
-        List<AvailabilityResponse.Day> days = isBookable(service) ? freeSlots(service, start, end) : List.of();
+        List<AvailabilityResponse.Day> days = isBookable(service)
+                ? freeSlots(service, start, end, ignored, excludedStart) : List.of();
         return new AvailabilityResponse(service.getId(), service.getDurationMinutes(), Business.ZONE.getId(),
-                days.isEmpty() ? "El servicio no tiene disponibilidad proxima" : null, days);
+                days.isEmpty() ? emptyMessage : null, days);
     }
 
     // A slot is offered when the whole service fits inside the opening hours and overlaps no reservation, active hold
-    // or provider block (HU-10).
-    private List<AvailabilityResponse.Day> freeSlots(ServiceOffering service, LocalDate from, LocalDate to) {
+    // or provider block (HU-10). HU-19 passes the reservation being moved (and its own hold) as ignored.
+    private List<AvailabilityResponse.Day> freeSlots(ServiceOffering service, LocalDate from, LocalDate to,
+            Predicate<Reservation> ignored, Instant excludedStart) {
         Business business = service.getBusiness();
         Instant now = Instant.now();
         Duration duration = Duration.ofMinutes(service.getDurationMinutes());
         Instant rangeStart = from.atStartOfDay(Business.ZONE).toInstant();
         Instant rangeEnd = to.plusDays(1).atStartOfDay(Business.ZONE).toInstant();
         List<Reservation> reservations = reservationRepository.findBlocking(business.getId(), rangeStart, rangeEnd,
-                now, ReservationStatus.CONFIRMADA);
+                now, ReservationStatus.CONFIRMADA).stream().filter(ignored.negate()).toList();
         List<Instant[]> busy = Stream.concat(
                 reservations.stream().map(r -> new Instant[] {r.getStartAt(), r.getEndAt()}),
                 blockRepository.findOverlapping(business.getId(), rangeStart, rangeEnd).stream()
@@ -145,7 +165,7 @@ public class CatalogService {
                     !slot.plus(duration).isAfter(close); slot = slot.plusMinutes(SLOT_STEP_MINUTES)) {
                 Instant startAt = slot.toInstant();
                 Instant endAt = startAt.plus(duration);
-                if (startAt.isAfter(now) && busy.stream()
+                if (startAt.isAfter(now) && !startAt.equals(excludedStart) && busy.stream()
                         .noneMatch(period -> period[0].isBefore(endAt) && period[1].isAfter(startAt))) {
                     slots.add(startAt);
                 }
