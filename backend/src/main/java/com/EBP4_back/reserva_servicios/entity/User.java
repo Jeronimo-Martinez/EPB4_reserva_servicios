@@ -62,6 +62,7 @@ public class User {
     public UserRole getRole() { return role; }
     public boolean isVerified() { return verified; }
     public void verify() { this.verified = true; }
+    public void changePassword(String passwordHash) { this.passwordHash = passwordHash; }
 
     // HU-05: email and role are restricted, so only these fields can change.
     public void updateContact(String firstName, String lastName, String phone) {

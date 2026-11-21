@@ -5,6 +5,7 @@ import com.EBP4_back.reserva_servicios.enums.ReservationStatus;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -28,4 +29,9 @@ public interface ReservationRepository extends JpaRepository<Reservation, UUID> 
 
     @EntityGraph(attributePaths = {"service", "service.business"})
     List<Reservation> findAllByClientIdOrderByStartAtAsc(UUID clientId);
+
+    // HU-19: bloqueo temporal del nuevo horario de una reprogramacion en curso.
+    Optional<Reservation> findFirstByRescheduleOfIdOrderByCreatedAtDesc(UUID reservationId);
+
+    void deleteAllByRescheduleOfId(UUID reservationId);
 }

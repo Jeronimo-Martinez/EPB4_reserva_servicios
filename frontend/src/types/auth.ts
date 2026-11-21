@@ -74,6 +74,19 @@ export interface ResendCodeResponse {
   email: string;
 }
 
+/** HU-04: respuesta de los tres pasos de la recuperación de contraseña. */
+export interface PasswordRecoveryResponse {
+  message: string;
+  email: string;
+}
+
+export interface PasswordResetDTO {
+  email: string;
+  code: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
 export interface RegisterProviderDTO {
   firstName: string;
   lastName?: string;

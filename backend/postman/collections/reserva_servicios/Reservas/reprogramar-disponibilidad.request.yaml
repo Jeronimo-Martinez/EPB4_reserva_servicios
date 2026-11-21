@@ -1,0 +1,8 @@
+$kind: http-request
+name: Reprogramar - Horarios Disponibles
+order: 4500
+method: GET
+url: '{{baseUrl}}/api/v1/reservations/{{reservationId}}/reschedule/availability?from=2026-11-16&to=2026-11-22'
+headers:
+  - key: Authorization
+    value: Bearer {{token}}

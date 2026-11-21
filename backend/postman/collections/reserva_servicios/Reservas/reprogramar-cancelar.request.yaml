@@ -1,0 +1,8 @@
+$kind: http-request
+name: Reprogramar - Cancelar Cambio
+order: 8000
+method: DELETE
+url: '{{baseUrl}}/api/v1/reservations/{{reservationId}}/reschedule'
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
