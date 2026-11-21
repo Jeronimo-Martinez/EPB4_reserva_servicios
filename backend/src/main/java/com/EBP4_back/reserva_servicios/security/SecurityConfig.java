@@ -32,7 +32,8 @@ public class SecurityConfig {
                 .addFilterBefore(new TokenAuthenticationFilter(sessions), UsernamePasswordAuthenticationFilter.class)
                 // Least privilege: each role only reaches its own functions; the first matching rule wins.
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/v1/registrations/**", "/api/v1/auth/login", "/error").permitAll()
+                        .requestMatchers("/api/v1/registrations/**", "/api/v1/auth/login", "/api/v1/auth/password-recovery/**",
+                                "/error").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/catalog/**").permitAll()
                         .requestMatchers("/api/v1/services/**", "/api/v1/schedule/**").hasRole("PROVEEDOR")
                         .requestMatchers("/api/v1/reservations/**").hasRole("CLIENTE")

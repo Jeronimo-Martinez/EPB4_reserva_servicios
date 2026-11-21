@@ -7,7 +7,7 @@ import { InicioSesion, RegistroCliente, RegistroProveedor } from '@/features/aut
 import { GestionServicios } from '@/features/servicios';
 import { HorarioAtencion } from '@/features/horarios';
 import { AgendaNegocio } from '@/features/agenda';
-import { MisReservas, ReservarCita } from '@/features/reservas';
+import { MisReservas, ReprogramarReserva, ReservarCita } from '@/features/reservas';
 import { DetalleNegocio, ResultadosNegocios } from '@/features/negocios';
 import { PerfilUsuario } from '@/features/perfil';
 import {
@@ -49,6 +49,8 @@ function MainRouter() {
         return <AgendaNegocio />;
       case 'reservar':
         return <ReservarCita />;
+      case 'reprogramar':
+        return <ReprogramarReserva />;
       case 'negocios':
         return <ResultadosNegocios />;
       case 'negocio':

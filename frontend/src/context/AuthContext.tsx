@@ -15,6 +15,7 @@ import {
 } from '@/api/auth';
 import { ApiError, SESSION_ENDED_MESSAGE, SESSION_EXPIRED_EVENT, USER_STORAGE_KEY } from '@/api/client';
 import { Service } from '@/types/service';
+import type { ReservationResponse } from '@/api/reservations';
 
 export type AppView =
   | 'landing'
@@ -27,6 +28,7 @@ export type AppView =
   | 'horarios'
   | 'agenda'
   | 'reservar'
+  | 'reprogramar'
   | 'negocios'
   | 'negocio'
   | 'perfil'
@@ -75,13 +77,16 @@ interface AuthContextType {
   /** Categoría preseleccionada al abrir el catálogo desde la landing. */
   catalogCategory: string | null;
   openCatalog: (category?: string) => void;
+  /** HU-19: reserva abierta en el detalle / flujo de reprogramación. */
+  selectedReservation: ReservationResponse | null;
+  openReservation: (reservation: ReservationResponse) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Least privilege in the UI too (the backend enforces the same rule): each role only opens its own screens.
 const PROVIDER_VIEWS: AppView[] = ['servicios', 'horarios', 'agenda'];
-const CLIENT_VIEWS: AppView[] = ['reservas', 'reservar'];
+const CLIENT_VIEWS: AppView[] = ['reservas', 'reservar', 'reprogramar'];
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(() => {
@@ -109,6 +114,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [selectedBusinessId, setSelectedBusinessId] = useState<string | null>(null);
   const [businessReturnView, setBusinessReturnView] = useState<AppView>('negocios');
   const [catalogCategory, setCatalogCategory] = useState<string | null>(null);
+  const [selectedReservation, setSelectedReservation] = useState<ReservationResponse | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -168,6 +174,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const openCatalog = (category?: string) => {
     setCatalogCategory(category || null);
     navigate('catalogo');
+  };
+
+  const openReservation = (reservation: ReservationResponse) => {
+    setSelectedReservation(reservation);
+    navigate('reprogramar');
   };
 
   const login = async (credentials: LoginCredentials) => {
@@ -261,6 +272,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         openBusiness,
         catalogCategory,
         openCatalog,
+        selectedReservation,
+        openReservation,
       }}
     >
       {children}

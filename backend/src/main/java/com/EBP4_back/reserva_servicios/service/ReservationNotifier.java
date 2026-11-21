@@ -17,6 +17,7 @@ import org.springframework.stereotype.Component;
 public class ReservationNotifier {
     private static final Logger log = LoggerFactory.getLogger(ReservationNotifier.class);
     private static final DateTimeFormatter WHEN = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm").withZone(Business.ZONE);
+    private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HH:mm").withZone(Business.ZONE);
     private final ObjectProvider<MailSender> mailSender;
     private final boolean mailEnabled;
 
@@ -33,12 +34,17 @@ public class ReservationNotifier {
                         WHEN.format(reservation.getStartAt()), reservation.getId()));
     }
 
-    /** HU-19: the provider learns both the previous and the new time. */
-    public void notifyRescheduled(Reservation reservation, Instant previousStartAt) {
+    /** HU-19: the provider learns the previous slot (now free) and the new one, start and end. */
+    public void notifyRescheduled(Reservation reservation, Instant previousStartAt, Instant previousEndAt) {
         send(providerEmail(reservation), "Reserva reprogramada en ProMarket",
-                "%s reprogramo su reserva de %s.%nHorario anterior: %s%nNuevo horario: %s (hora Colombia)%nReserva %s".formatted(
+                "%s reprogramo su reserva de %s.%nHorario anterior (liberado): %s%nNuevo horario: %s%nHora Colombia. Reserva %s".formatted(
                         reservation.getClient().getEmail(), reservation.getService().getName(),
-                        WHEN.format(previousStartAt), WHEN.format(reservation.getStartAt()), reservation.getId()));
+                        range(previousStartAt, previousEndAt), range(reservation.getStartAt(), reservation.getEndAt()),
+                        reservation.getId()));
+    }
+
+    private static String range(Instant start, Instant end) {
+        return WHEN.format(start) + " - " + TIME.format(end);
     }
 
     /** HU-20: the client learns the provider cancelled, with the reason when there is one. */

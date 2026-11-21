@@ -1,0 +1,3 @@
+$kind: collection
+name: Recuperacion
+description: HU-04 Recuperacion de contrasena. Publicos (sin token). En el perfil demo el codigo aparece en el log del backend.

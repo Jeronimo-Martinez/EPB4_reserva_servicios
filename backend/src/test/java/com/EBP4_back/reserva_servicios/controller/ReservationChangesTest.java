@@ -137,18 +137,23 @@ class ReservationChangesTest {
         reschedule(client, id, at(monday, 7)).andExpect(status().isBadRequest());
         reschedule(newUser(UserRole.CLIENTE), id, at(monday, 11)).andExpect(status().isForbidden());
 
+        // Selecting the new slot only holds it; the change applies when the client confirms (HU-19 flow).
         reschedule(client, id, at(monday, 11))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.newStartAt").value(at(monday, 11).toString()))
+                .andExpect(jsonPath("$.newEndAt").value(at(monday, 12).toString()));
+        mockMvc.perform(post("/api/v1/reservations/" + id + "/reschedule/confirm").header("Authorization", bearer(client)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("Reserva reprogramada exitosamente"))
+                .andExpect(jsonPath("$.message").value("Tu reserva fue reprogramada exitosamente"));
+        mockMvc.perform(get("/api/v1/reservations/" + id).header("Authorization", bearer(client)))
                 .andExpect(jsonPath("$.startAt").value(at(monday, 11).toString()))
                 .andExpect(jsonPath("$.endAt").value(at(monday, 12).toString()));
         availability(service, monday, monday)
                 .andExpect(jsonPath("$.days[0].slots", hasItem(at(monday, 9).toString())))
                 .andExpect(jsonPath("$.days[0].slots", not(hasItem(at(monday, 11).toString()))));
-        assertThat(output).contains("Horario anterior: " + "%02d/%02d/%d 09:00".formatted(
-                monday.getDayOfMonth(), monday.getMonthValue(), monday.getYear()));
-        assertThat(output).contains("Nuevo horario: " + "%02d/%02d/%d 11:00".formatted(
-                monday.getDayOfMonth(), monday.getMonthValue(), monday.getYear()));
+        String day = "%02d/%02d/%d".formatted(monday.getDayOfMonth(), monday.getMonthValue(), monday.getYear());
+        assertThat(output).contains("Horario anterior (liberado): " + day + " 09:00 - 10:00");
+        assertThat(output).contains("Nuevo horario: " + day + " 11:00 - 12:00");
     }
 
     @Test
