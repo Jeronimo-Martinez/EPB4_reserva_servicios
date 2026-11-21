@@ -77,10 +77,6 @@ export async function toggleServiceAvailability(
   });
 }
 
-export async function fetchCategories(): Promise<{ code: string; label: string }[]> {
-  return request<{ code: string; label: string }[]>('/api/v1/services/categories');
-}
-
 export interface BusinessDetail {
   id: string;
   name: string;

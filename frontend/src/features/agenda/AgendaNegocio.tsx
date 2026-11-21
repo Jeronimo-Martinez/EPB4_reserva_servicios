@@ -1,9 +1,19 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { NavBar, ProviderAside } from '@/components/layout';
+import { TextareaField } from '@/components/ui';
 import { useAuth } from '@/context/AuthContext';
 import { ApiError } from '@/api/client';
-import { AgendaDay, AgendaEntry, AgendaResponse, AgendaView, fetchAgenda } from '@/api/schedule';
+import {
+  AgendaBlock,
+  AgendaDay,
+  AgendaEntry,
+  AgendaResponse,
+  AgendaView,
+  cancelReservationByProvider,
+  fetchAgenda,
+} from '@/api/schedule';
 import { capitalize, dayKey, fmt, hhmm, longDate, shift, toDate } from '@/utils/dates';
+import BloquearPeriodo from './BloquearPeriodo';
 
 const VIEWS: { value: AgendaView; label: string }[] = [
   { value: 'DIA', label: 'Día' },
@@ -70,13 +80,25 @@ function EntryCard({ entry, continued, onSelect }: { entry: AgendaEntry; continu
   );
 }
 
+function BlockCard({ block }: { block: AgendaBlock }) {
+  return (
+    <div className="flex-1 rounded-[6px] bg-[#e4e7e1] border border-dashed border-[#b5bbb6] px-2.5 py-1.5 text-[11px] text-[#66716c]">
+      <p className="flex items-center gap-1.5 font-semibold text-[#18211e]"><LockIcon /> No disponible</p>
+      {block.reason && <p className="truncate">{block.reason}</p>}
+    </div>
+  );
+}
+
 function HourCell({ day, hour, onSelect }: { day: AgendaDay; hour: number; onSelect: (e: AgendaEntry) => void }) {
   const start = hour * 60;
   const end = start + 60;
-  const busy = day.reservations.filter((r) => minutesOf(hhmm(r.startAt)) < end && minutesOf(hhmm(r.endAt)) > start);
-  if (busy.length) {
+  const overlaps = (p: { startAt: string; endAt: string }) => minutesOf(hhmm(p.startAt)) < end && minutesOf(hhmm(p.endAt)) > start;
+  const busy = day.reservations.filter(overlaps);
+  const blocked = day.blocks.filter(overlaps);
+  if (busy.length || blocked.length) {
     return (
       <div className="h-full flex flex-col gap-1">
+        {blocked.map((b) => <BlockCard key={b.id} block={b} />)}
         {busy.map((r) => (
           <EntryCard key={r.id} entry={r} continued={minutesOf(hhmm(r.startAt)) < start} onSelect={onSelect} />
         ))}
@@ -160,6 +182,11 @@ function MonthGrid({ agenda, today, onSelect }: { agenda: AgendaResponse; today:
                 {Number(date.slice(8))}
               </span>
               <div className="mt-1 flex flex-col gap-1">
+                {day?.blocks.map((b) => (
+                  <div key={b.id} className="rounded-[4px] bg-[#e4e7e1] px-2 py-0.5 text-[10px] text-[#66716c] truncate">
+                    No disponible {hhmm(b.startAt)}–{hhmm(b.endAt)}
+                  </div>
+                ))}
                 {day?.reservations.map((r) =>
                   r.status === 'PENDIENTE' ? (
                     <div key={r.id} className="rounded-[4px] bg-[#e4e7e1] px-2 py-0.5 text-[10px] text-[#66716c] truncate">
@@ -185,8 +212,111 @@ function MonthGrid({ agenda, today, onSelect }: { agenda: AgendaResponse; today:
   );
 }
 
-function ReservationDrawer({ entry, onClose }: { entry: AgendaEntry; onClose: () => void }) {
+const dangerButton =
+  'bg-[#d94f41] hover:bg-[#b23b2e] text-white font-semibold text-[13px] px-4 py-2 rounded-[8px] transition-colors cursor-pointer disabled:opacity-60';
+const plainButton =
+  'border border-[#d4d9d3] bg-white hover:bg-[#f2f3ee] text-[#18211e] font-semibold text-[13px] px-4 py-2 rounded-[8px] transition-colors cursor-pointer';
+
+/** HU-20: optional reason → confirmation → cancelled (the drawer keeps showing it, the agenda frees the slot). */
+function CancelSection({ entry, onCancelled }: { entry: AgendaEntry; onCancelled: () => void }) {
+  const [step, setStep] = useState<'inicio' | 'motivo' | 'confirmar' | 'cancelada'>('inicio');
+  const [reason, setReason] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const start = () => {
+    // Escenario 3: a reservation that already started or passed cannot be cancelled.
+    if (new Date(entry.startAt).getTime() <= Date.now()) setError('No puedes cancelar una reserva que ya pasó.');
+    else setStep('motivo');
+  };
+
+  async function confirm() {
+    setBusy(true);
+    setError('');
+    try {
+      await cancelReservationByProvider(entry.id, reason);
+      setStep('cancelada');
+      onCancelled();
+    } catch (err: unknown) {
+      setError(err instanceof ApiError ? err.message : 'No se pudo cancelar la reserva.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const errorBox = error && (
+    <p role="alert" className="rounded-[8px] bg-[#fdf1f0] border border-[#f3c4be] px-3 py-2 text-[13px] text-[#b23b2e]">{error}</p>
+  );
+
+  if (step === 'cancelada') {
+    return (
+      <div role="status" className="rounded-[8px] bg-[#fdf1f0] border border-[#f3c4be] px-4 py-3 text-[13px]">
+        <p className="font-semibold text-[#b23b2e]">Cancelación iniciada por el proveedor</p>
+        <p className="text-[#66716c] mt-0.5">
+          {reason.trim() ? `Motivo enviado al cliente: ${reason.trim()}.` : 'El cliente fue notificado sin motivo.'} El horario quedó disponible.
+        </p>
+      </div>
+    );
+  }
+  if (step === 'motivo') {
+    return (
+      <div className="flex flex-col gap-3">
+        <h3 className="text-[#18211e] text-[15px] font-semibold">Cancelar reserva de {entry.clientName.split(' ')[0]}</h3>
+        <p className="text-[#66716c] text-[12px]">Puedes explicar por qué no podrás prestar el servicio. El motivo es opcional y se incluirá en la notificación.</p>
+        <TextareaField
+          label="Motivo de cancelación (opcional)"
+          value={reason}
+          onChange={setReason}
+          placeholder="Ej: El profesional asignado no estará disponible."
+          maxLength={250}
+          rows={3}
+        />
+        <div className="flex justify-end gap-2">
+          <button type="button" onClick={() => setStep('inicio')} className={plainButton}>Volver</button>
+          <button type="button" onClick={() => setStep('confirmar')} className={dangerButton}>Continuar</button>
+        </div>
+      </div>
+    );
+  }
+  if (step === 'confirmar') {
+    return (
+      <div className="flex flex-col gap-3">
+        <h3 className="text-[#18211e] text-[15px] font-semibold">¿Confirmas la cancelación?</h3>
+        <div className="bg-[#f2f3ee] rounded-[8px] px-3 py-2 text-[13px] flex flex-col gap-0.5">
+          <p className="font-semibold text-[#18211e]">{entry.clientName} · {entry.serviceName}</p>
+          <p className="text-[#66716c]">{longDate(dayKey(entry.startAt))} · {hhmm(entry.startAt)} – {hhmm(entry.endAt)}</p>
+          <p className="text-[#66716c]">Motivo: {reason.trim() || 'Sin motivo'}</p>
+        </div>
+        <p className="text-[#66716c] text-[12px]">
+          El horario se liberará, el cliente recibirá una notificación inmediata y el historial indicará que la cancelación fue iniciada por el proveedor.
+        </p>
+        {errorBox}
+        <div className="flex justify-end gap-2">
+          <button type="button" onClick={() => setStep('motivo')} disabled={busy} className={plainButton}>Revisar</button>
+          <button type="button" onClick={confirm} disabled={busy} className={dangerButton}>
+            {busy ? 'Cancelando...' : 'Sí, cancelar reserva'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-2">
+      {errorBox}
+      <button
+        type="button"
+        onClick={start}
+        className="w-full border border-[#d94f41] text-[#d94f41] hover:bg-[#fdf1f0] font-semibold text-[13px] px-4 py-2 rounded-[8px] transition-colors cursor-pointer bg-transparent"
+      >
+        Cancelar reserva
+      </button>
+    </div>
+  );
+}
+
+function ReservationDrawer({ entry, onClose, onCancelled }: { entry: AgendaEntry; onClose: () => void; onCancelled: () => void }) {
   const closeRef = useRef<HTMLButtonElement>(null);
+  const [cancelled, setCancelled] = useState(false);
   useEffect(() => {
     closeRef.current?.focus();
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -247,8 +377,8 @@ function ReservationDrawer({ entry, onClose }: { entry: AgendaEntry; onClose: ()
           </div>
           <div>
             <p className="text-[#18211e] text-[15px] font-semibold">{entry.clientName}</p>
-            <span className="inline-block mt-0.5 text-[11px] text-[#005146] bg-[#e6f0ef] px-2 py-0.5 rounded-full font-semibold">
-              {entry.status === 'CONFIRMADA' ? 'Confirmada' : 'Pendiente'}
+            <span className={`inline-block mt-0.5 text-[11px] px-2 py-0.5 rounded-full font-semibold ${cancelled ? 'text-[#b23b2e] bg-[#fdf1f0]' : 'text-[#005146] bg-[#e6f0ef]'}`}>
+              {cancelled ? 'Cancelada' : entry.status === 'CONFIRMADA' ? 'Confirmada' : 'Pendiente'}
             </span>
           </div>
         </div>
@@ -274,6 +404,18 @@ function ReservationDrawer({ entry, onClose }: { entry: AgendaEntry; onClose: ()
             <a href={`mailto:${entry.clientEmail}`} className="hover:text-[#005146] break-all">{entry.clientEmail}</a>
           </div>
         </div>
+
+        {entry.status === 'CONFIRMADA' && (
+          <div className="px-5 py-4 border-t border-[#ecefe9]">
+            <CancelSection
+              entry={entry}
+              onCancelled={() => {
+                setCancelled(true);
+                onCancelled();
+              }}
+            />
+          </div>
+        )}
       </aside>
     </div>
   );
@@ -288,6 +430,9 @@ export default function AgendaNegocio() {
   const [agenda, setAgenda] = useState<AgendaResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<AgendaEntry | null>(null);
+  const [blocking, setBlocking] = useState(false);
+  // Bumped after a block or a cancellation so the grid shows the change.
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (!providerEmail) {
@@ -306,7 +451,7 @@ export default function AgendaNegocio() {
     return () => {
       current = false;
     };
-  }, [providerEmail, view, date]);
+  }, [providerEmail, view, date, reloadKey]);
 
   const move = (step: number) =>
     setDate((d) => (view === 'MES' ? shift(d, 0, step) : shift(d, view === 'SEMANA' ? 7 * step : step)));
@@ -329,21 +474,30 @@ export default function AgendaNegocio() {
             <div>
               <p className="text-[#005146] text-[11px] font-semibold tracking-[0.88px] uppercase">Panel del proveedor</p>
               <h2 className="text-[#18211e] text-[24px] font-bold leading-tight mt-1">Mi agenda</h2>
-              <p className="text-[#66716c] text-[14px] mt-1">Consulta tus reservas y espacios disponibles.</p>
+              <p className="text-[#66716c] text-[14px] mt-1">Consulta tus reservas y bloquea los periodos en los que no podrás atender.</p>
             </div>
-            <div className="inline-flex bg-[#e4e7e1] rounded-[10px] p-1 self-start sm:self-auto" role="group" aria-label="Vista de la agenda">
-              {VIEWS.map((v) => (
-                <button
-                  key={v.value}
-                  type="button"
-                  aria-pressed={view === v.value}
-                  onClick={() => setView(v.value)}
-                  className={`px-4 py-1.5 rounded-[8px] text-[13px] font-semibold transition-colors cursor-pointer
-                    ${view === v.value ? 'bg-white text-[#005146] shadow-xs' : 'text-[#66716c] hover:text-[#18211e]'}`}
-                >
-                  {v.label}
-                </button>
-              ))}
+            <div className="flex flex-wrap items-center gap-3 self-start sm:self-auto">
+              <button
+                type="button"
+                onClick={() => setBlocking(true)}
+                className="bg-[#005146] hover:bg-[#00403b] text-white font-semibold text-[13px] px-4 py-2 rounded-[8px] transition-colors cursor-pointer shadow-xs"
+              >
+                Bloquear periodo
+              </button>
+              <div className="inline-flex bg-[#e4e7e1] rounded-[10px] p-1" role="group" aria-label="Vista de la agenda">
+                {VIEWS.map((v) => (
+                  <button
+                    key={v.value}
+                    type="button"
+                    aria-pressed={view === v.value}
+                    onClick={() => setView(v.value)}
+                    className={`px-4 py-1.5 rounded-[8px] text-[13px] font-semibold transition-colors cursor-pointer
+                      ${view === v.value ? 'bg-white text-[#005146] shadow-xs' : 'text-[#66716c] hover:text-[#18211e]'}`}
+                  >
+                    {v.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -360,7 +514,7 @@ export default function AgendaNegocio() {
               <ul className="flex items-center gap-4 text-[12px] text-[#66716c]">
                 <li className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#e6f0ef] border-l-2 border-[#005146]" />Reserva</li>
                 <li className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full border border-dashed border-[#b5bbb6]" />Disponible</li>
-                <li className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#d4d9d3]" />Bloqueado</li>
+                <li className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#d4d9d3]" />No disponible</li>
               </ul>
             </header>
 
@@ -391,7 +545,27 @@ export default function AgendaNegocio() {
         </div>
       </main>
 
-      {selected && <ReservationDrawer entry={selected} onClose={() => setSelected(null)} />}
+      {selected && (
+        <ReservationDrawer
+          entry={selected}
+          onClose={() => setSelected(null)}
+          onCancelled={() => {
+            setReloadKey((k) => k + 1);
+            showNotification('success', 'Reserva cancelada correctamente. El cliente recibió una notificación y el horario quedó disponible.');
+          }}
+        />
+      )}
+      {blocking && (
+        <BloquearPeriodo
+          initialDate={date < today ? today : date}
+          onClose={() => setBlocking(false)}
+          onCreated={() => {
+            setBlocking(false);
+            setReloadKey((k) => k + 1);
+            showNotification('success', 'Bloqueo creado correctamente. Los clientes ya no pueden reservar en ese periodo.');
+          }}
+        />
+      )}
     </div>
   );
 }

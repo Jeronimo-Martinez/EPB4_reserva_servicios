@@ -119,6 +119,19 @@ class LoginControllerTest {
                 .andExpect(status().isOk());
     }
 
+    @Test
+    void forgedForwardedForEntriesDoNotDodgeThePerIpLimit() throws Exception {
+        // The proxy appends the real IP last; the attacker changes the first entry on every try.
+        String realIp = "203.0.113." + (System.nanoTime() % 250);
+        for (int attempt = 0; attempt <= 20; attempt++) {
+            mockMvc.perform(post("/api/v1/auth/login").header("X-Forwarded-For", "10.0.0." + attempt + ", " + realIp)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"email\":\"nadie.%d.%d@example.com\",\"password\":\"Clave1234\",\"recaptchaToken\":\"x\"}"
+                                    .formatted(attempt, System.nanoTime())))
+                    .andExpect(attempt < 20 ? status().isUnauthorized() : status().isTooManyRequests());
+        }
+    }
+
     private org.springframework.test.web.servlet.ResultActions performLogin(String email, String password)
             throws Exception {
         return mockMvc.perform(post("/api/v1/auth/login")

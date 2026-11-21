@@ -8,6 +8,7 @@ import CancelReservationDialog from './CancelReservationDialog';
 import { StatusFilterChips } from './StatusFilterChips';
 import { statusMeta } from './reservationStatus';
 import { cop, dayKey, fmt, hhmm, longDate } from '@/utils/dates';
+import ReprogramarReserva from './ReprogramarReserva';
 
 const calendarIcon = (
   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -134,6 +135,20 @@ export default function MisReservas() {
   const upcoming = reservations?.filter((r) => new Date(r.endAt).getTime() > now) ?? [];
   const past = reservations?.filter((r) => new Date(r.endAt).getTime() <= now).reverse() ?? [];
 
+  if (rescheduling) {
+    return (
+      <ReprogramarReserva
+        reservation={rescheduling}
+        onCancel={() => setRescheduling(null)}
+        onDone={(updated) => {
+          setRescheduling(null);
+          setReloadKey((k) => k + 1);
+          showNotification('success', `Reserva reprogramada para el ${longDate(dayKey(updated.startAt))} a las ${hhmm(updated.startAt)}.`);
+        }}
+      />
+    );
+  }
+
   return (
     <div className="bg-[#f2f3ee] min-h-screen flex flex-col">
       <NavBar />
@@ -206,7 +221,7 @@ export default function MisReservas() {
                 onAction={() => navigate('catalogo')}
               />
             )}
-            {past.length > 0 && <Section title="Citas pasadas" reservations={past} past />}
+            {past.length > 0 && <Section title="Citas pasadas" reservations={past} past onReschedule={startReschedule} />}
           </>
         )}
       </main>

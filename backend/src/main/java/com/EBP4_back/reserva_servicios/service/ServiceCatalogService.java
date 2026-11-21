@@ -43,7 +43,7 @@ public class ServiceCatalogService {
         validatePrice(request.price());
         ServiceOffering saved = serviceRepository.save(new ServiceOffering(business,
                 request.name().trim(),
-                request.category().trim(),
+                categoryLabel(request.category()),
                 normalize(request.description()),
                 request.durationMinutes(),
                 request.price(),
@@ -66,7 +66,7 @@ public class ServiceCatalogService {
         validateDuration(request.durationMinutes());
         validatePrice(request.price());
         service.updateDetails(request.name().trim(),
-                request.category().trim(),
+                categoryLabel(request.category()),
                 normalize(request.description()),
                 request.durationMinutes(),
                 request.price(),
@@ -86,6 +86,17 @@ public class ServiceCatalogService {
         return Stream.of(ServiceCategory.values())
                 .map(cat -> new CategoryResponse(cat.name(), cat.getLabel()))
                 .toList();
+    }
+
+    // One stored form, the label: the catalog filter, the landing stats and the seed data compare labels,
+    // while the provider form sends the code.
+    private String categoryLabel(String value) {
+        String category = value.trim();
+        return Stream.of(ServiceCategory.values())
+                .filter(c -> c.name().equalsIgnoreCase(category) || c.getLabel().equalsIgnoreCase(category))
+                .map(ServiceCategory::getLabel)
+                .findFirst()
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "La categoria del servicio no es valida"));
     }
 
     private Business requireBusiness(String providerEmail) {

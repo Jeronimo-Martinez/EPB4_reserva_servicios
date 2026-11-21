@@ -1,7 +1,6 @@
 package com.EBP4_back.reserva_servicios.controller;
 
 import com.EBP4_back.reserva_servicios.dto.AvailabilityRequest;
-import com.EBP4_back.reserva_servicios.dto.CategoryResponse;
 import com.EBP4_back.reserva_servicios.dto.ServiceOfferingRequest;
 import com.EBP4_back.reserva_servicios.dto.ServiceOfferingResponse;
 import com.EBP4_back.reserva_servicios.security.AuthUser;
@@ -52,10 +51,5 @@ public class ServiceCatalogController {
     public ServiceOfferingResponse changeAvailability(@PathVariable UUID id,
             @Valid @RequestBody AvailabilityRequest request, @AuthenticationPrincipal AuthUser user) {
         return serviceCatalogService.changeAvailability(id, user.email(), request.available());
-    }
-
-    @GetMapping("/categories")
-    public List<CategoryResponse> categories() {
-        return serviceCatalogService.listCategories();
     }
 }

@@ -1,6 +1,7 @@
 package com.EBP4_back.reserva_servicios.entity;
 
 import com.EBP4_back.reserva_servicios.enums.ReservationStatus;
+import com.EBP4_back.reserva_servicios.enums.UserRole;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -13,6 +14,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -41,6 +43,14 @@ public class Reservation {
     private Instant holdExpiresAt;
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
+    // History of a cancellation (HU-20): who started it, why and when.
+    @Enumerated(EnumType.STRING)
+    @Column(name = "cancelled_by", length = 20)
+    private UserRole cancelledBy;
+    @Column(name = "cancellation_reason", length = 250)
+    private String cancellationReason;
+    @Column(name = "cancelled_at")
+    private Instant cancelledAt;
 
     protected Reservation() { }
 
@@ -79,4 +89,6 @@ public class Reservation {
     public BigDecimal getTotalPrice() { return totalPrice; }
     public ReservationStatus getStatus() { return status; }
     public Instant getHoldExpiresAt() { return holdExpiresAt; }
+    public UserRole getCancelledBy() { return cancelledBy; }
+    public String getCancellationReason() { return cancellationReason; }
 }

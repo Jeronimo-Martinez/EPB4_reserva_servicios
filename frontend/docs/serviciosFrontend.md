@@ -265,6 +265,11 @@ Confirma la reserva (botón **Confirmar reserva**), sin cuerpo. Responde `200` c
 #### Mis reservas — `GET /api/v1/reservations`
 Pantalla `src/features/reservas/MisReservas.tsx` (**Mis Reservas** en la barra del cliente o **Ver mis reservas** al confirmar). Lista solo las reservas `CONFIRMADA` del cliente con sesión, ordenadas por fecha; el backend lo identifica por el token, así que nunca devuelve reservas de otros clientes (HUS-29). Los bloqueos temporales no aparecen. La pantalla las separa en **Próximas citas** (aún no terminan) y **Citas pasadas** (la más reciente primero). Responde `200` con una lista de objetos como el de la confirmación (`message: null`), `401` sin sesión y `403` para proveedores.
 
+#### Reprogramar (HU-19) — `POST /api/v1/reservations/{id}/reschedule`
+Botón **Reprogramar reserva** de cada tarjeta en "Mis reservas" (`src/features/reservas/ReprogramarReserva.tsx`). La pantalla pide la disponibilidad del servicio (`serviceId` viene en la reserva), muestra las fechas y horas libres y luego un resumen con el horario anterior y el nuevo; **Cancelar** vuelve sin cambiar nada. Cuerpo `{ "startAt": "2026-11-23T16:00:00Z" }`. Responde `200` con la reserva actualizada (el horario anterior queda libre y el proveedor recibe un correo con ambos horarios); `409` si el horario ya no está libre, si la reserva está cancelada o si ya pasó; `400` fuera del horario de atención. Si no hay cupos, la pantalla muestra "No hay horarios disponibles".
+
+Las reservas canceladas también aparecen en "Mis reservas" (`status: "CANCELADA"`, `cancelledBy`, `cancellationReason`).
+
 ---
 
 ### 4. Horario de Atención del Proveedor (HU-09)
@@ -336,6 +341,29 @@ Response `200 OK`:
 ```
 
 `openTime`/`closeTime` son `null` si el negocio no atiende ese día. `status: "PENDIENTE"` es un bloqueo temporal mientras otro cliente completa su reserva y se muestra como **Bloqueado**. Si no hay reservas, `message` trae "No tienes reservas programadas en este periodo".
+
+#### Bloquear periodo (HU-10) — `POST /api/v1/schedule/blocks`
+Botón **Bloquear periodo** de la agenda (`src/features/agenda/BloquearPeriodo.tsx`): formulario → revisión → advertencia si hay reservas.
+
+```json
+{ "startDate": "2026-11-25", "endDate": "2026-11-25", "startTime": "13:00", "endTime": "16:00", "reason": "Asunto personal", "confirmConflicts": false }
+```
+Sin `startTime`/`endTime` se bloquean los días completos. Responde `201` con el bloqueo; `409` si se cruza con otro bloqueo; **`428`** si el periodo incluye reservas confirmadas: el mensaje las lista y no se guarda nada hasta reenviar con `"confirmConflicts": true` (las reservas se mantienen; el proveedor puede cancelarlas desde la agenda). Los bloqueos aparecen en la agenda (`days[].blocks`, recortados al horario de atención) y se excluyen de la disponibilidad y de las reservas nuevas.
+
+#### Cancelar reserva (HU-20) — `POST /api/v1/schedule/reservations/{id}/cancel`
+Botón **Cancelar reserva** en el detalle de una reserva de la agenda: motivo opcional (máx. 250) → confirmación. Cuerpo `{ "reason": "..." }` o `{}`. Responde `200` con la reserva en `CANCELADA`; el horario queda libre y el cliente recibe un correo con el motivo. `409` si ya estaba cancelada o ya pasó; `403` si la reserva es de otro negocio.
+
+---
+
+### 6. Perfil (HU-05)
+
+Pantalla `src/features/perfil/PerfilUsuario.tsx` (**Mi Perfil** en el menú del usuario). Las llamadas están en `src/api/auth.ts`.
+
+#### `GET /api/v1/profile`
+`{ "firstName": "María", "lastName": "González", "email": "...", "phone": "+57 310 458 6721", "role": "CLIENTE", "verified": true }`
+
+#### `PUT /api/v1/profile`
+`{ "firstName": "María", "lastName": "González", "phone": "+57 310 458 6721" }`. Solo se pueden cambiar nombre, apellido y teléfono; el correo y el rol se ignoran aunque se envíen (en pantalla el correo aparece deshabilitado). Mismas validaciones que el registro: `400` con el mensaje si el nombre está vacío o el teléfono no tiene formato válido, y no se guarda nada.
 
 ---
 

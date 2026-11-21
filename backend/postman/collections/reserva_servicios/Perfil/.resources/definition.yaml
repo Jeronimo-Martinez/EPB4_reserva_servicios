@@ -1,0 +1,3 @@
+$kind: collection
+name: Perfil
+description: Datos personales del usuario con sesion (HU-05). Requieren Authorization: Bearer {{token}} de cualquier rol. Solo se pueden cambiar nombre, apellido y telefono.

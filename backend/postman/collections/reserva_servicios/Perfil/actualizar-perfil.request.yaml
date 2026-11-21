@@ -1,0 +1,18 @@
+$kind: http-request
+name: Actualizar Perfil
+order: 2000
+method: PUT
+url: '{{baseUrl}}/api/v1/profile'
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "firstName": "Maria",
+      "lastName": "Gonzalez",
+      "phone": "+57 310 458 6721"
+    }

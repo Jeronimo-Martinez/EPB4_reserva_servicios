@@ -258,11 +258,9 @@ Mismos parámetros que crear servicio. Valida que el servicio exista y pertenezc
 
 Responde `200 OK` con el servicio actualizado.
 
-### Listar categorías
+### Categoría del servicio
 
-`GET /api/v1/services/categories`
-
-Retorna un array de categorías con `code` y `label`:
+`category` acepta el código o el nombre de la categoría (`EDUCACION` o `Educacion`) y siempre se guarda el nombre, que es lo que usan el filtro del catálogo y los conteos. Una categoría que no existe responde `400`. Las categorías válidas (`GET /api/v1/catalog/categories`):
 
 ```json
 [
@@ -291,7 +289,7 @@ Parámetros opcionales de consulta. Retorna:
       "id": "uuid",
       "name": "Masaje Terapéutico",
       "description": "...",
-      "category": "SALUD_Y_BIENESTAR",
+      "category": "Salud y Bienestar",
       "durationMinutes": 60,
       "price": 80000,
       "currency": "COP",
@@ -319,7 +317,7 @@ Retorna un solo servicio con toda su información.
 
 `GET /api/v1/catalog/categories`
 
-Retorna las mismas categorías que `/api/v1/services/categories`.
+Retorna el arreglo de categorías con `code` y `label` (ver *Categoría del servicio*).
 
 ## Datos de muestra
 

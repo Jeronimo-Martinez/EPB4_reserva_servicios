@@ -37,11 +37,15 @@ public class LoginController {
         sessionService.close(authorization.substring("Bearer ".length()).trim());
     }
 
-    /** IP real del cliente (primera de X-Forwarded-For si hay proxy, si no la remota). */
+    /**
+     * IP real del cliente. Render's proxy appends it at the end of X-Forwarded-For; the earlier entries come from
+     * the client and can be forged to dodge the per-IP login limit.
+     */
     private String clientIp(HttpServletRequest httpRequest) {
         String forwarded = httpRequest.getHeader("X-Forwarded-For");
         if (forwarded != null && !forwarded.isBlank()) {
-            return forwarded.split(",")[0].trim();
+            String[] hops = forwarded.split(",");
+            return hops[hops.length - 1].trim();
         }
         return httpRequest.getRemoteAddr();
     }

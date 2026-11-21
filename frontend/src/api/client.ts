@@ -64,7 +64,7 @@ export async function request<T>(
     // Error de red / conexión rechazada (Backend offline)
     throw new ApiError(
       0,
-      'No fue posible conectar con el servidor backend. Se activará el modo local de respaldo.'
+      'No fue posible conectar con el servidor. Intenta de nuevo en unos segundos.'
     );
   }
 }

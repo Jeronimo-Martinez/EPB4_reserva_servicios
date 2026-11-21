@@ -15,6 +15,10 @@ export interface ReservationResponse {
   currency: string;
   /** Solo mientras la reserva es un bloqueo temporal (PENDIENTE). */
   holdExpiresAt: string | null;
+  serviceId: string;
+  /** Solo en reservas CANCELADA: quién la canceló y el motivo opcional. */
+  cancelledBy: 'CLIENTE' | 'PROVEEDOR' | null;
+  cancellationReason: string | null;
 }
 
 /** Reservas del cliente con sesión (el backend lo identifica por el token), por fecha ascendente. */

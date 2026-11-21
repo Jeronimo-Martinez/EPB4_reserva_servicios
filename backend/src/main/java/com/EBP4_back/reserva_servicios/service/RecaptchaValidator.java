@@ -1,11 +1,14 @@
 package com.EBP4_back.reserva_servicios.service;
 
 import com.EBP4_back.reserva_servicios.dto.RecaptchaVerifyResponse;
+import java.net.http.HttpClient;
+import java.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -33,7 +36,11 @@ public class RecaptchaValidator {
         this.enabled = enabled;
         this.secretKey = secretKey;
         this.verifyUrl = verifyUrl;
-        this.restClient = RestClient.create();
+        // Login and registration hold a database connection (5 in total) while Google answers; never wait forever.
+        JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(
+                HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build());
+        requestFactory.setReadTimeout(Duration.ofSeconds(5));
+        this.restClient = RestClient.builder().requestFactory(requestFactory).build();
     }
 
     public void validate(String token) {
