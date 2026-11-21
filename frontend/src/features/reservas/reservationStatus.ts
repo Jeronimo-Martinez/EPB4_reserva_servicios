@@ -12,32 +12,15 @@ export const UNKNOWN_STATUS: StatusMeta = {
   tone: 'bg-[#ecefe9] text-[#66716c] border-[#d4d9d3]',
 };
 
-const PAST_CONFIRMED: StatusMeta = {
-  label: 'Finalizada',
-  tone: 'bg-[#ecefe9] text-[#66716c] border-[#d4d9d3]',
-};
-
 export const STATUS_META: Record<ReservationStatus, StatusMeta> = {
   PENDIENTE: { label: 'Pendiente', tone: 'bg-[#fdf6e3] text-[#8a6d1a] border-[#ecd9a0]' },
   CONFIRMADA: { label: 'Confirmada', tone: 'bg-[#e6f0ef] text-[#005146] border-[#b8d4d1]' },
   CANCELADA: { label: 'Cancelada', tone: 'bg-[#fdf1f0] text-[#d94f41] border-[#f2bfbb]' },
-  ATENDIDA: { label: 'Atendida', tone: 'bg-[#ecefe9] text-[#66716c] border-[#d4d9d3]' },
-  NO_ASISTIDA: { label: 'No asistida', tone: 'bg-[#ecefe9] text-[#66716c] border-[#d4d9d3]' },
 };
 
-/** Badge de una reserva: una confirmada del pasado sigue mostrando "Finalizada" (look de develop). */
-export function statusMeta(status: ReservationStatus, past: boolean): StatusMeta {
-  if (past && status === 'CONFIRMADA') {
-    return PAST_CONFIRMED;
-  }
+/** El badge muestra siempre uno de los cinco estados reales, sin inventar etiquetas por fecha. */
+export function statusMeta(status: ReservationStatus): StatusMeta {
   return STATUS_META[status] ?? UNKNOWN_STATUS;
 }
 
-export const STATUS_FILTERS: (ReservationStatus | '')[] = [
-  '',
-  'PENDIENTE',
-  'CONFIRMADA',
-  'CANCELADA',
-  'ATENDIDA',
-  'NO_ASISTIDA',
-];
+export const STATUS_FILTERS: (ReservationStatus | '')[] = ['', 'PENDIENTE', 'CONFIRMADA', 'CANCELADA'];

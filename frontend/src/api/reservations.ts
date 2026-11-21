@@ -1,11 +1,6 @@
 import { request } from '@/api/client';
 
-export type ReservationStatus =
-  | 'PENDIENTE'
-  | 'CONFIRMADA'
-  | 'CANCELADA'
-  | 'ATENDIDA'
-  | 'NO_ASISTIDA';
+export type ReservationStatus = 'PENDIENTE' | 'CONFIRMADA' | 'CANCELADA';
 
 export interface ReservationResponse {
   message: string | null;
@@ -39,4 +34,9 @@ export async function createHold(serviceId: string, startAt: string): Promise<Re
 /** Convierte el bloqueo en reserva. 410 si el bloqueo ya expiró. */
 export async function confirmReservation(id: string): Promise<ReservationResponse> {
   return request<ReservationResponse>(`/api/v1/reservations/${id}/confirm`, { method: 'POST' });
+}
+
+/** Libera el horario de una reserva pendiente o confirmada. 409 si ya pasó o ya no se puede cancelar. */
+export async function cancelReservation(id: string): Promise<ReservationResponse> {
+  return request<ReservationResponse>(`/api/v1/reservations/${id}/cancel`, { method: 'POST' });
 }

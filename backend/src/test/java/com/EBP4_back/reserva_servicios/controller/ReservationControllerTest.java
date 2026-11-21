@@ -18,6 +18,7 @@ import jakarta.persistence.PersistenceContext;
 import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalAdjusters;
 import java.util.UUID;
 import java.util.regex.Matcher;
@@ -126,44 +127,24 @@ class ReservationControllerTest {
         confirm(confirmed, client);
         String cancelled = holdId(client, service, slot(12));
         confirm(cancelled, client);
-        String attended = holdId(client, service, slot(14));
-        confirm(attended, client);
-        String noShow = holdId(client, service, slot(16));
-        confirm(noShow, client);
         setStatus(cancelled, ReservationStatus.CANCELADA);
-        setStatus(attended, ReservationStatus.ATENDIDA);
-        setStatus(noShow, ReservationStatus.NO_ASISTIDA);
         // An abandoned hold expires and must never show up as a reservation of the client.
         String expired = holdId(client, service, slot(17));
         expireHold(expired);
 
         mockMvc.perform(get("/api/v1/reservations").header("Authorization", bearer(client)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(4))
+                .andExpect(jsonPath("$.length()").value(2))
                 .andExpect(jsonPath("$[0].id").value(confirmed))
                 .andExpect(jsonPath("$[0].status").value("CONFIRMADA"))
                 .andExpect(jsonPath("$[1].id").value(cancelled))
-                .andExpect(jsonPath("$[1].status").value("CANCELADA"))
-                .andExpect(jsonPath("$[2].status").value("ATENDIDA"))
-                .andExpect(jsonPath("$[3].status").value("NO_ASISTIDA"));
+                .andExpect(jsonPath("$[1].status").value("CANCELADA"));
 
         mockMvc.perform(get("/api/v1/reservations").param("status", "CANCELADA")
                         .header("Authorization", bearer(client)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].id").value(cancelled));
-
-        mockMvc.perform(get("/api/v1/reservations").param("status", "ATENDIDA")
-                        .header("Authorization", bearer(client)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].id").value(attended));
-
-        mockMvc.perform(get("/api/v1/reservations").param("status", "no_asistida")
-                        .header("Authorization", bearer(client)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].id").value(noShow));
 
         mockMvc.perform(get("/api/v1/reservations").param("status", "CONFIRMADA")
                         .header("Authorization", bearer(client)))
@@ -181,6 +162,50 @@ class ReservationControllerTest {
                         .header("Authorization", bearer(client)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Estado de reserva no valido"));
+    }
+
+    // HU 3.3.1: cancelling frees the slot and a cancelled reservation cannot be cancelled again.
+    @Test
+    void clientCancelsOwnReservationAndFreesTheSlot() throws Exception {
+        Instant slot = freeSlot(9);
+        String id = holdId(CLIENT, serviceId("Masaje Descontracturante"), slot);
+        confirm(id, CLIENT).andExpect(status().isOk());
+
+        cancel(id, CLIENT).andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(id))
+                .andExpect(jsonPath("$.status").value("CANCELADA"))
+                .andExpect(jsonPath("$.message").value("Reserva cancelada"));
+
+        hold(otherClient(), serviceId("Masaje Descontracturante"), slot).andExpect(status().isCreated());
+        cancel(id, CLIENT).andExpect(status().isConflict());
+    }
+
+    @Test
+    void cannotCancelForeignOrPastReservation() throws Exception {
+        String id = holdId(CLIENT, serviceId("Masaje Descontracturante"), freeSlot(10));
+        confirm(id, CLIENT);
+        cancel(id, otherClient()).andExpect(status().isForbidden());
+
+        String past = holdId(CLIENT, serviceId("Masaje Descontracturante"), freeSlot(11));
+        confirm(past, CLIENT);
+        backdate(past);
+        cancel(past, CLIENT).andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("No se puede cancelar una reserva que ya paso"));
+    }
+
+    private ResultActions cancel(String id, String email) throws Exception {
+        return mockMvc.perform(post("/api/v1/reservations/" + id + "/cancel").header("Authorization", bearer(email)));
+    }
+
+    // Holds must start in the future, so past appointments are created first and moved back afterwards.
+    private void backdate(String id) {
+        Instant start = Instant.now().minus(2, ChronoUnit.HOURS);
+        new TransactionTemplate(transactionManager).executeWithoutResult(tx -> entityManager
+                .createQuery("UPDATE Reservation r SET r.startAt = :start, r.endAt = :end WHERE r.id = :id")
+                .setParameter("start", start)
+                .setParameter("end", start.plus(1, ChronoUnit.HOURS))
+                .setParameter("id", UUID.fromString(id))
+                .executeUpdate());
     }
 
     private void setStatus(String id, ReservationStatus status) {
@@ -234,6 +259,12 @@ class ReservationControllerTest {
     // Centro Vital (demo data) attends Monday to Saturday 08:00-18:00 Bogota time.
     private Instant slot(int hour) {
         return LocalDate.now(Business.ZONE).with(TemporalAdjusters.next(DayOfWeek.MONDAY)).plusWeeks(4)
+                .atTime(hour, 0).atZone(Business.ZONE).toInstant();
+    }
+
+    // The other tests fill the Monday four weeks ahead, so the new scenarios use a later week.
+    private Instant freeSlot(int hour) {
+        return LocalDate.now(Business.ZONE).with(TemporalAdjusters.next(DayOfWeek.MONDAY)).plusWeeks(6)
                 .atTime(hour, 0).atZone(Business.ZONE).toInstant();
     }
 

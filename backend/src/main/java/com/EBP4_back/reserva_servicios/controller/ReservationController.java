@@ -49,4 +49,9 @@ public class ReservationController {
     public ReservationResponse confirm(@PathVariable UUID id, @AuthenticationPrincipal AuthUser user) {
         return reservationService.confirm(id, user.email());
     }
+
+    @PostMapping("/{id}/cancel")
+    public ReservationResponse cancel(@PathVariable UUID id, @AuthenticationPrincipal AuthUser user) {
+        return reservationService.cancel(id, user.email());
+    }
 }

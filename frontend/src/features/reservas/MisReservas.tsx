@@ -4,6 +4,7 @@ import { EmptyState } from '@/components/ui';
 import { useAuth } from '@/context/AuthContext';
 import { ApiError } from '@/api/client';
 import { ReservationResponse, ReservationStatus, fetchMyReservations } from '@/api/reservations';
+import CancelReservationDialog from './CancelReservationDialog';
 import { StatusFilterChips } from './StatusFilterChips';
 import { statusMeta } from './reservationStatus';
 import { cop, dayKey, fmt, hhmm, longDate } from '@/utils/dates';
@@ -24,11 +25,13 @@ function ReservationCard({
   reservation: ReservationResponse;
   past: boolean;
   onReschedule?: () => void;
-  onCancel?: () => void;
+  onCancel?: (reservation: ReservationResponse) => void;
 }) {
   const day = dayKey(reservation.startAt);
   const tone = past ? 'bg-[#ecefe9] text-[#66716c] border-[#d4d9d3]' : 'bg-[#e6f0ef] text-[#005146] border-[#b8d4d1]';
-  const badge = statusMeta(reservation.status, past);
+  const badge = statusMeta(reservation.status);
+  // Reprogramar/cancelar solo tiene sentido mientras la cita siga viva y por venir.
+  const canAct = !past && (reservation.status === 'PENDIENTE' || reservation.status === 'CONFIRMADA');
   return (
     <li className="bg-[#fcfcf8] border border-[#d4d9d3] rounded-[12px] shadow-xs p-4 sm:p-5 flex gap-4 items-start">
       <div className={`w-14 shrink-0 rounded-[10px] border py-2 text-center ${tone}`} aria-hidden="true">
@@ -50,7 +53,7 @@ function ReservationCard({
           {reservation.durationMinutes} min · <span className="text-[#005146] font-semibold">{cop(reservation.totalPrice)}</span>
         </p>
 
-        {!past && (
+        {canAct && (
           <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[#ecefe9]">
             <button
               type="button"
@@ -61,7 +64,7 @@ function ReservationCard({
             </button>
             <button
               type="button"
-              onClick={onCancel}
+              onClick={() => onCancel?.(reservation)}
               className="text-[12px] font-semibold text-[#d94f41] hover:bg-[#fdf1f0] px-3 py-1.5 rounded-[6px] transition-colors cursor-pointer border border-transparent hover:border-[#f2bfbb]"
             >
               Cancelar cita
@@ -84,7 +87,7 @@ function Section({
   reservations: ReservationResponse[];
   past: boolean;
   onReschedule?: () => void;
-  onCancel?: () => void;
+  onCancel?: (reservation: ReservationResponse) => void;
 }) {
   return (
     <section className="flex flex-col gap-3">
@@ -107,11 +110,12 @@ function Section({
 }
 
 export default function MisReservas() {
-  const { navigate } = useAuth();
+  const { navigate, showNotification } = useAuth();
   const [reservations, setReservations] = useState<ReservationResponse[] | null>(null);
   const [error, setError] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
   const [statusFilter, setStatusFilter] = useState<ReservationStatus | ''>('');
+  const [canceling, setCanceling] = useState<ReservationResponse | null>(null);
 
   useEffect(() => {
     let current = true;
@@ -182,7 +186,7 @@ export default function MisReservas() {
           ) : (
           <EmptyState
             icon={calendarIcon}
-            title="Aún no tienes citas agendadas"
+            title="Aún no tienes reservas realizadas"
             description="Explora nuestro catálogo para descubrir profesionales calificados y agendar tu primera cita cuando lo necesites."
             actionText="Explorar catálogo de servicios"
             onAction={() => navigate('catalogo')}
@@ -191,7 +195,7 @@ export default function MisReservas() {
         ) : (
           <>
             {upcoming.length ? (
-              <Section title="Próximas citas" reservations={upcoming} past={false} onReschedule={() => navigate('reprogramar-reserva')} onCancel={() => navigate('cancelar-reserva-cliente')} />
+              <Section title="Próximas citas" reservations={upcoming} past={false} onReschedule={() => navigate('reprogramar-reserva')} onCancel={setCanceling} />
             ) : (
               <EmptyState
                 variant="dashed"
@@ -206,6 +210,18 @@ export default function MisReservas() {
           </>
         )}
       </main>
+
+      {canceling && (
+        <CancelReservationDialog
+          reservation={canceling}
+          onClose={() => setCanceling(null)}
+          onCancelled={() => {
+            setCanceling(null);
+            setReloadKey((k) => k + 1);
+            showNotification('success', 'Reserva cancelada');
+          }}
+        />
+      )}
     </div>
   );
 }
