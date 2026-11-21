@@ -74,21 +74,11 @@ public class Reservation {
         this.holdExpiresAt = null;
     }
 
-    /** A reservation that already started (or passed) can no longer be rescheduled or cancelled. */
-    public boolean hasStarted(Instant now) {
-        return !startAt.isAfter(now);
-    }
-
-    public void reschedule(Instant newStartAt) {
-        this.endAt = newStartAt.plus(Duration.between(startAt, endAt));
-        this.startAt = newStartAt;
-    }
-
-    public void cancel(UserRole by, String reason) {
+    // A cancelled reservation keeps no hold: findBlocking only blocks CONFIRMADA rows and live holds,
+    // so the slot is free again without touching anything else.
+    public void cancel() {
         this.status = ReservationStatus.CANCELADA;
-        this.cancelledBy = by;
-        this.cancellationReason = reason;
-        this.cancelledAt = Instant.now();
+        this.holdExpiresAt = null;
     }
 
     public UUID getId() { return id; }

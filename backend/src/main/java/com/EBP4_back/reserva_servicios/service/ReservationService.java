@@ -73,11 +73,26 @@ public class ReservationService {
     }
 
     // "Mis reservas": the client id comes from the session token, so other clients' reservations are never listed.
+    // An abandoned hold (PENDIENTE past its expiry) is not a reservation and stays hidden.
     @Transactional(readOnly = true)
-    public List<ReservationResponse> listOwn(UUID clientId) {
-        return reservationRepository.findAllByClientIdAndStatusInOrderByStartAtAsc(clientId,
-                        List.of(ReservationStatus.CONFIRMADA, ReservationStatus.CANCELADA))
-                .stream().map(reservation -> toResponse(reservation, null)).toList();
+    public List<ReservationResponse> listOwn(UUID clientId, String status) {
+        ReservationStatus filter = parseStatus(status);
+        Instant now = Instant.now();
+        return reservationRepository.findAllByClientIdOrderByStartAtAsc(clientId).stream()
+                .filter(reservation -> !reservation.isHoldExpired(now))
+                .filter(reservation -> filter == null || reservation.getStatus() == filter)
+                .map(reservation -> toResponse(reservation, null)).toList();
+    }
+
+    private ReservationStatus parseStatus(String status) {
+        if (status == null || status.isBlank()) {
+            return null;
+        }
+        try {
+            return ReservationStatus.valueOf(status.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Estado de reserva no valido");
+        }
     }
 
     @Transactional(readOnly = true)
@@ -89,6 +104,23 @@ public class ReservationService {
             case CANCELADA -> "Reserva cancelada";
             case PENDIENTE -> "Horario reservado temporalmente";
         });
+    }
+
+    // HU 3.3.1: the client frees the slot; findBlocking ignores CANCELADA rows, so it becomes available again.
+    @Transactional
+    public ReservationResponse cancel(UUID id, String clientEmail) {
+        Reservation reservation = requireOwned(id, clientEmail, "CANCELAR_RESERVA",
+                "No tienes permitido cancelar esta reserva");
+        ReservationStatus status = reservation.getStatus();
+        if (status != ReservationStatus.PENDIENTE && status != ReservationStatus.CONFIRMADA) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Solo se puede cancelar una reserva pendiente o confirmada");
+        }
+        if (!reservation.getStartAt().isAfter(Instant.now())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "No se puede cancelar una reserva que ya paso");
+        }
+        reservation.cancel();
+        return toResponse(reservation, "Reserva cancelada");
     }
 
     @Transactional

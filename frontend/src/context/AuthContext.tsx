@@ -29,7 +29,21 @@ export type AppView =
   | 'reservar'
   | 'negocios'
   | 'negocio'
-  | 'perfil';
+  | 'perfil'
+  // Sprint 3:
+  | 'recuperar-contrasena'
+  | 'perfil-cliente'
+  | 'perfil-negocio'
+  | 'bloqueo-horarios'
+  | 'cancelar-reserva-cliente'
+  | 'reprogramar-reserva'
+  | 'cancelar-reserva-proveedor'
+  | 'historial-proveedor'
+  | 'asistencia-reserva'
+  | 'notificaciones'
+  | 'reporte-servicios'
+  | 'reporte-ocupacion'
+  | 'reporte-exportar';
 
 interface NotificationState {
   type: 'success' | 'info' | 'error';

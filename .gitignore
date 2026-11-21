@@ -68,3 +68,9 @@ node_modules/
 **/node_modules/
 **/dist/
 .vite/
+
+# Documentation and Reference Materials (Mockups, Requirements)
+*.docx
+INSTRUCTIONS.md
+sprint 3/
+User Registration Mockup*/

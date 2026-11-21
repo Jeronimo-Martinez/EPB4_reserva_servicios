@@ -1,9 +1,11 @@
 import { request } from '@/api/client';
 
+export type ReservationStatus = 'PENDIENTE' | 'CONFIRMADA' | 'CANCELADA';
+
 export interface ReservationResponse {
   message: string | null;
   id: string;
-  status: 'PENDIENTE' | 'CONFIRMADA' | 'CANCELADA';
+  status: ReservationStatus;
   businessName: string;
   serviceName: string;
   durationMinutes: number;
@@ -19,17 +21,10 @@ export interface ReservationResponse {
   cancellationReason: string | null;
 }
 
-/** HU-19: mueve una reserva confirmada a otro horario libre. 409 si el horario ya no está libre o la reserva no se puede cambiar. */
-export async function rescheduleReservation(id: string, startAt: string): Promise<ReservationResponse> {
-  return request<ReservationResponse>(`/api/v1/reservations/${id}/reschedule`, {
-    method: 'POST',
-    body: JSON.stringify({ startAt }),
-  });
-}
-
-/** Reservas confirmadas y canceladas del cliente con sesión (el backend lo identifica por el token), por fecha ascendente. */
-export async function fetchMyReservations(): Promise<ReservationResponse[]> {
-  return request<ReservationResponse[]>('/api/v1/reservations');
+/** Reservas del cliente con sesión (el backend lo identifica por el token), por fecha ascendente. */
+export async function fetchMyReservations(status?: ReservationStatus): Promise<ReservationResponse[]> {
+  const qs = status ? `?status=${status}` : '';
+  return request<ReservationResponse[]>(`/api/v1/reservations${qs}`);
 }
 
 /** Bloquea el horario por unos minutos mientras el cliente revisa y confirma. 409 si otro cliente ya lo tomó. */
@@ -43,4 +38,9 @@ export async function createHold(serviceId: string, startAt: string): Promise<Re
 /** Convierte el bloqueo en reserva. 410 si el bloqueo ya expiró. */
 export async function confirmReservation(id: string): Promise<ReservationResponse> {
   return request<ReservationResponse>(`/api/v1/reservations/${id}/confirm`, { method: 'POST' });
+}
+
+/** Libera el horario de una reserva pendiente o confirmada. 409 si ya pasó o ya no se puede cancelar. */
+export async function cancelReservation(id: string): Promise<ReservationResponse> {
+  return request<ReservationResponse>(`/api/v1/reservations/${id}/cancel`, { method: 'POST' });
 }

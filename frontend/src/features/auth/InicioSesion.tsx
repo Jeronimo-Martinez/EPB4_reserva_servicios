@@ -246,7 +246,7 @@ export default function InicioSesion({ onRegistro }: { onRegistro?: () => void }
                 {(attempts >= 3 || isBlocked) && (
                   <button
                     type="button"
-                    onClick={() => setScreen('recuperacion')}
+                    onClick={() => navigate('recuperar-contrasena')}
                     className="text-[#d94f41] text-[13px] font-semibold underline mt-1 hover:opacity-75 bg-transparent border-none cursor-pointer"
                   >
                     Recuperar contraseña
@@ -276,7 +276,7 @@ export default function InicioSesion({ onRegistro }: { onRegistro?: () => void }
                 <label className="text-[#18211e] text-[14px] font-medium">Contraseña</label>
                 <button
                   type="button"
-                  onClick={() => setScreen('recuperacion')}
+                  onClick={() => navigate('recuperar-contrasena')}
                   className="text-[#005146] text-[13px] font-semibold hover:underline bg-transparent border-none cursor-pointer"
                 >
                   ¿Olvidaste tu contraseña?
