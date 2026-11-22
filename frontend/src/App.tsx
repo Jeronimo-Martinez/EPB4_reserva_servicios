@@ -9,6 +9,7 @@ import { AgendaNegocio } from '@/features/agenda';
 import { MisReservas, ReservarCita } from '@/features/reservas';
 import { DetalleNegocio, ResultadosNegocios } from '@/features/negocios';
 import { PerfilUsuario } from '@/features/perfil';
+import { Notificaciones } from '@/features/notificaciones';
 
 function MainRouter() {
   const { currentView, notification, clearNotification } = useAuth();
@@ -39,6 +40,8 @@ function MainRouter() {
         return <DetalleNegocio />;
       case 'perfil':
         return <PerfilUsuario />;
+      case 'notificaciones':
+        return <Notificaciones />;
       case 'landing':
       default:
         return <Landing />;

@@ -3,7 +3,7 @@ import { NavBar } from '@/components/layout';
 import { EmptyState } from '@/components/ui';
 import { useAuth } from '@/context/AuthContext';
 import { ApiError } from '@/api/client';
-import { ReservationResponse, fetchMyReservations } from '@/api/reservations';
+import { ReservationResponse, cancelMyReservation, fetchMyReservations } from '@/api/reservations';
 import { cop, dayKey, fmt, hhmm, longDate } from '@/utils/dates';
 import ReprogramarReserva from './ReprogramarReserva';
 
@@ -24,11 +24,17 @@ interface CardProps {
   reservation: ReservationResponse;
   past: boolean;
   onReschedule: (r: ReservationResponse) => void;
+  onCancel: (r: ReservationResponse) => Promise<void>;
 }
 
-function ReservationCard({ reservation, past, onReschedule }: CardProps) {
+const outlineButton = 'border font-semibold text-[13px] px-3.5 py-1.5 rounded-[8px] transition-colors cursor-pointer bg-transparent disabled:opacity-60';
+
+function ReservationCard({ reservation, past, onReschedule, onCancel }: CardProps) {
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
   const day = dayKey(reservation.startAt);
   const cancelled = reservation.status === 'CANCELADA';
+  const active = !cancelled && new Date(reservation.startAt).getTime() > Date.now();
   const tone = cancelled ? TONES.cancelled : past ? TONES.past : TONES.active;
   return (
     <li className="bg-[#fcfcf8] border border-[#d4d9d3] rounded-[12px] shadow-xs p-4 sm:p-5 flex gap-4 items-start">
@@ -54,23 +60,50 @@ function ReservationCard({ reservation, past, onReschedule }: CardProps) {
         </p>
         {cancelled && (
           <p className="mt-3 rounded-[8px] bg-[#fdf1f0] px-3 py-2 text-[12px] text-[#b23b2e]">
-            {reservation.cancelledBy === 'PROVEEDOR' ? 'Cancelada por el proveedor' : 'Reserva cancelada'}
+            {reservation.cancelledBy === 'PROVEEDOR' ? 'Cancelada por el proveedor' : reservation.cancelledBy === 'CLIENTE' ? 'Cancelaste esta reserva' : 'Reserva cancelada'}
             {reservation.cancellationReason ? `: ${reservation.cancellationReason}` : '.'}
           </p>
         )}
-        <button
-          type="button"
-          onClick={() => onReschedule(reservation)}
-          className="mt-3 border border-[#005146] text-[#005146] hover:bg-[#e6f0ef] font-semibold text-[13px] px-3.5 py-1.5 rounded-[8px] transition-colors cursor-pointer bg-transparent"
-        >
-          Reprogramar reserva
-        </button>
+        {confirming ? (
+          <div role="alert" className="mt-3 rounded-[8px] bg-[#fdf1f0] border border-[#f3c4be] px-3 py-2.5 flex flex-wrap items-center gap-3">
+            <p className="text-[13px] text-[#18211e] flex-1 min-w-[200px]">
+              ¿Cancelar esta reserva? {reservation.businessName} recibirá una notificación y el horario quedará libre.
+            </p>
+            <button type="button" onClick={() => setConfirming(false)} disabled={busy} className={`${outlineButton} border-[#d4d9d3] text-[#18211e] bg-white`}>
+              No
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={async () => {
+                setBusy(true);
+                await onCancel(reservation);
+                setBusy(false);
+                setConfirming(false);
+              }}
+              className="bg-[#d94f41] hover:bg-[#b23b2e] text-white font-semibold text-[13px] px-3.5 py-1.5 rounded-[8px] transition-colors cursor-pointer disabled:opacity-60"
+            >
+              {busy ? 'Cancelando...' : 'Sí, cancelar reserva'}
+            </button>
+          </div>
+        ) : (
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button type="button" onClick={() => onReschedule(reservation)} className={`${outlineButton} border-[#005146] text-[#005146] hover:bg-[#e6f0ef]`}>
+              Reprogramar reserva
+            </button>
+            {active && (
+              <button type="button" onClick={() => setConfirming(true)} className={`${outlineButton} border-[#d94f41] text-[#d94f41] hover:bg-[#fdf1f0]`}>
+                Cancelar reserva
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </li>
   );
 }
 
-function Section({ title, reservations, past, onReschedule }: Omit<CardProps, 'reservation'> & { title: string; reservations: ReservationResponse[] }) {
+function Section({ title, reservations, past, onReschedule, onCancel }: Omit<CardProps, 'reservation'> & { title: string; reservations: ReservationResponse[] }) {
   return (
     <section className="flex flex-col gap-3">
       <h2 className="text-[#18211e] text-[18px] font-bold">
@@ -78,7 +111,7 @@ function Section({ title, reservations, past, onReschedule }: Omit<CardProps, 'r
       </h2>
       <ul className="flex flex-col gap-3">
         {reservations.map((r) => (
-          <ReservationCard key={r.id} reservation={r} past={past} onReschedule={onReschedule} />
+          <ReservationCard key={r.id} reservation={r} past={past} onReschedule={onReschedule} onCancel={onCancel} />
         ))}
       </ul>
     </section>
@@ -97,6 +130,17 @@ export default function MisReservas() {
     if (r.status === 'CANCELADA') showNotification('error', 'No puedes reprogramar una reserva cancelada.');
     else if (new Date(r.startAt).getTime() <= Date.now()) showNotification('error', 'No puedes reprogramar una reserva que ya pasó.');
     else setRescheduling(r);
+  };
+
+  // HU-24, escenario 5: the provider is notified by the backend.
+  const cancelReservation = async (r: ReservationResponse) => {
+    try {
+      await cancelMyReservation(r.id);
+      showNotification('success', `Reserva cancelada. ${r.businessName} recibió una notificación.`);
+      setReloadKey((k) => k + 1);
+    } catch (err: unknown) {
+      showNotification('error', err instanceof ApiError ? err.message : 'No se pudo cancelar la reserva.');
+    }
   };
 
   useEffect(() => {
@@ -179,7 +223,7 @@ export default function MisReservas() {
         ) : (
           <>
             {upcoming.length ? (
-              <Section title="Próximas citas" reservations={upcoming} past={false} onReschedule={startReschedule} />
+              <Section title="Próximas citas" reservations={upcoming} past={false} onReschedule={startReschedule} onCancel={cancelReservation} />
             ) : (
               <EmptyState
                 variant="dashed"
@@ -190,7 +234,7 @@ export default function MisReservas() {
                 onAction={() => navigate('catalogo')}
               />
             )}
-            {past.length > 0 && <Section title="Citas pasadas" reservations={past} past onReschedule={startReschedule} />}
+            {past.length > 0 && <Section title="Citas pasadas" reservations={past} past onReschedule={startReschedule} onCancel={cancelReservation} />}
           </>
         )}
       </main>

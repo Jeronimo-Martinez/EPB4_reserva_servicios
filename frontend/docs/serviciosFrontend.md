@@ -367,6 +367,31 @@ Pantalla `src/features/perfil/PerfilUsuario.tsx` (**Mi Perfil** en el menú del 
 
 ---
 
+### 7. Notificaciones (HU-24)
+
+Pantalla `src/features/notificaciones/Notificaciones.tsx`, abierta con la campana de la barra superior (muestra cuántas hay sin leer). Las llamadas están en `src/api/notifications.ts`. Cada evento se guarda como notificación en la app y además se envía por correo con el mismo texto:
+
+| Evento | Destinatario | Tipo |
+|---|---|---|
+| Cliente confirma una reserva | Proveedor | `NUEVA_RESERVA` |
+| Reserva reprogramada | Cliente y proveedor | `REPROGRAMACION` |
+| El proveedor cancela | Cliente (con el motivo) | `CANCELACION_PROVEEDOR` |
+| El cliente cancela | Proveedor | `CANCELACION_CLIENTE` |
+| Falta un día para la cita | Cliente | `RECORDATORIO` |
+
+El recordatorio lo envía una tarea automática del backend cada hora (`app.reminders.every`, por defecto `PT1H`), una sola vez por reserva. En Render gratuito el servidor se duerme sin visitas: un día sin ninguna visita no envía recordatorios.
+
+#### `GET /api/v1/notifications`
+Las 50 más recientes del usuario con sesión: `[{ "id", "type", "title", "body", "detail", "read", "createdAt" }]`.
+
+#### `POST /api/v1/notifications/{id}/read`
+Marca una notificación propia como leída (`204`); la de otro usuario responde `403`.
+
+#### Cancelar reserva (cliente) — `POST /api/v1/reservations/{id}/cancel`
+Botón **Cancelar reserva** en "Mis reservas" (solo reservas activas), con confirmación. Responde `200` con la reserva `CANCELADA` (`cancelledBy: "CLIENTE"`); el horario queda libre y el proveedor recibe una notificación. `409` si ya pasó o ya estaba cancelada.
+
+---
+
 ## Gestión de Estados Vacíos (Empty States)
 
 El frontend incluye el componente estandarizado `EmptyState` (`src/components/ui/EmptyState.tsx`) para gestionar limpiamente las respuestas vacías del backend:

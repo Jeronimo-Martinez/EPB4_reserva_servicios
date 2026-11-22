@@ -3,6 +3,7 @@ package com.EBP4_back.reserva_servicios.controller;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -18,6 +19,7 @@ import com.EBP4_back.reserva_servicios.repository.BusinessRepository;
 import com.EBP4_back.reserva_servicios.repository.ServiceOfferingRepository;
 import com.EBP4_back.reserva_servicios.repository.UserRepository;
 import com.EBP4_back.reserva_servicios.security.SessionService;
+import com.EBP4_back.reserva_servicios.service.ReservationReminderJob;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import java.math.BigDecimal;
@@ -44,7 +46,7 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
-/** HU-10 (bloqueos), HU-19 (reprogramacion) and HU-20 (cancelacion por el proveedor). */
+/** HU-10 (bloqueos), HU-19 (reprogramacion), HU-20 (cancelacion por el proveedor) and HU-24 (notificaciones). */
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("demo")
@@ -66,6 +68,8 @@ class ReservationChangesTest {
     private PlatformTransactionManager transactionManager;
     @PersistenceContext
     private EntityManager entityManager;
+    @Autowired
+    private ReservationReminderJob reminderJob;
 
     private final LocalDate monday = LocalDate.now(Business.ZONE).with(TemporalAdjusters.next(DayOfWeek.MONDAY)).plusWeeks(6);
 
@@ -124,7 +128,7 @@ class ReservationChangesTest {
     // ---------- HU-19
 
     @Test
-    void clientReschedulesAnActiveReservation(CapturedOutput output) throws Exception {
+    void clientReschedulesAnActiveReservation() throws Exception {
         User provider = newUser(UserRole.PROVEEDOR);
         ServiceOffering service = newService(newBusiness(provider));
         User client = newUser(UserRole.CLIENTE);
@@ -145,10 +149,15 @@ class ReservationChangesTest {
         availability(service, monday, monday)
                 .andExpect(jsonPath("$.days[0].slots", hasItem(at(monday, 9).toString())))
                 .andExpect(jsonPath("$.days[0].slots", not(hasItem(at(monday, 11).toString()))));
-        assertThat(output).contains("Horario anterior: " + "%02d/%02d/%d 09:00".formatted(
-                monday.getDayOfMonth(), monday.getMonthValue(), monday.getYear()));
-        assertThat(output).contains("Nuevo horario: " + "%02d/%02d/%d 11:00".formatted(
-                monday.getDayOfMonth(), monday.getMonthValue(), monday.getYear()));
+        // HU-24, escenario 3: both sides get the previous and the new time.
+        inbox(client)
+                .andExpect(jsonPath("$[0].type").value("REPROGRAMACION"))
+                .andExpect(jsonPath("$[0].title").value("Tu reserva fue reprogramada"))
+                .andExpect(jsonPath("$[0].body", containsString("09:00 · Nuevo horario: ")))
+                .andExpect(jsonPath("$[0].body", containsString("11:00.")));
+        inbox(provider)
+                .andExpect(jsonPath("$[0].type").value("REPROGRAMACION"))
+                .andExpect(jsonPath("$[0].title").value("Usuario Prueba reprogramó su reserva"));
     }
 
     @Test
@@ -187,6 +196,9 @@ class ReservationChangesTest {
 
         assertThat(output).contains("Notificacion de reserva para " + client.getEmail());
         assertThat(output).contains("Motivo: El profesional asignado no estara disponible");
+        inbox(client)
+                .andExpect(jsonPath("$[0].type").value("CANCELACION_PROVEEDOR"))
+                .andExpect(jsonPath("$[0].body").value("Motivo: El profesional asignado no estara disponible"));
         mockMvc.perform(get("/api/v1/reservations").header("Authorization", bearer(client)))
                 .andExpect(jsonPath("$[0].status").value("CANCELADA"))
                 .andExpect(jsonPath("$[0].cancelledBy").value("PROVEEDOR"))
@@ -208,6 +220,76 @@ class ReservationChangesTest {
         cancel(provider, past, "{}")
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").value("No puedes cancelar una reserva que ya pasó"));
+    }
+
+    // ---------- HU-24
+
+    @Test
+    void providerHearsAboutNewAndClientCancelledReservations() throws Exception {
+        User provider = newUser(UserRole.PROVEEDOR);
+        ServiceOffering service = newService(newBusiness(provider));
+        User client = newUser(UserRole.CLIENTE);
+        String id = reserve(client, service, at(monday, 10));
+        inbox(provider)
+                .andExpect(jsonPath("$[0].type").value("NUEVA_RESERVA"))
+                .andExpect(jsonPath("$[0].title").value("Nueva reserva de Usuario Prueba"))
+                .andExpect(jsonPath("$[0].detail", containsString("10:00")))
+                .andExpect(jsonPath("$[0].read").value(false));
+
+        clientCancel(newUser(UserRole.CLIENTE), id).andExpect(status().isForbidden());
+        clientCancel(client, id).andExpect(status().isOk()).andExpect(jsonPath("$.status").value("CANCELADA"));
+        clientCancel(client, id).andExpect(status().isConflict());
+        inbox(provider)
+                .andExpect(jsonPath("$[0].type").value("CANCELACION_CLIENTE"))
+                .andExpect(jsonPath("$[0].title").value("Usuario Prueba canceló su reserva"))
+                .andExpect(jsonPath("$[0].detail", containsString("Servicio Prueba")));
+        mockMvc.perform(get("/api/v1/reservations").header("Authorization", bearer(client)))
+                .andExpect(jsonPath("$[0].cancelledBy").value("CLIENTE"));
+        hold(newUser(UserRole.CLIENTE), service, at(monday, 10)).andExpect(status().isCreated());
+    }
+
+    @Test
+    void remindsTheClientOnceTheDayBeforeTheAppointment() throws Exception {
+        User provider = newUser(UserRole.PROVEEDOR);
+        ServiceOffering service = newService(newBusiness(provider));
+        User client = newUser(UserRole.CLIENTE);
+        LocalDate tomorrow = LocalDate.now(Business.ZONE).plusDays(1);
+        reserve(client, service, at(tomorrow, 10));
+        reserve(client, service, at(tomorrow.plusDays(2), 10));
+
+        reminderJob.sendReminders();
+        reminderJob.sendReminders();
+
+        inbox(client)
+                .andExpect(jsonPath("$[?(@.type=='RECORDATORIO')]", hasSize(1)))
+                .andExpect(jsonPath("$[0].title").value("Tu cita es mañana"))
+                .andExpect(jsonPath("$[0].body", containsString("Negocio " + provider.getEmail())))
+                .andExpect(jsonPath("$[0].detail", containsString("10:00")));
+    }
+
+    @Test
+    void eachUserOnlyMarksItsOwnNotificationsAsRead() throws Exception {
+        User provider = newUser(UserRole.PROVEEDOR);
+        reserve(newUser(UserRole.CLIENTE), newService(newBusiness(provider)), at(monday, 10));
+        String body = inbox(provider).andReturn().getResponse().getContentAsString();
+        Matcher matcher = ID.matcher(body);
+        assertThat(matcher.find()).isTrue();
+        String id = matcher.group(1);
+
+        mockMvc.perform(post("/api/v1/notifications/" + id + "/read").header("Authorization", bearer(newUser(UserRole.CLIENTE))))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/v1/notifications/" + id + "/read").header("Authorization", bearer(provider)))
+                .andExpect(status().isNoContent());
+        inbox(provider).andExpect(jsonPath("$[0].read").value(true));
+        mockMvc.perform(get("/api/v1/notifications")).andExpect(status().isUnauthorized());
+    }
+
+    private ResultActions inbox(User user) throws Exception {
+        return mockMvc.perform(get("/api/v1/notifications").header("Authorization", bearer(user))).andExpect(status().isOk());
+    }
+
+    private ResultActions clientCancel(User client, String id) throws Exception {
+        return mockMvc.perform(post("/api/v1/reservations/" + id + "/cancel").header("Authorization", bearer(client)));
     }
 
     private ResultActions block(User provider, LocalDate from, LocalDate to, String startTime, String endTime,
@@ -279,7 +361,7 @@ class ReservationChangesTest {
 
     private Business newBusiness(User provider) {
         Business business = new Business(provider, "Negocio " + provider.getEmail(), "Belleza", "Descripcion", "Calle 1");
-        business.replaceHours(Stream.of(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY)
+        business.replaceHours(Stream.of(DayOfWeek.values())
                 .map(day -> new BusinessHours(day, LocalTime.of(8, 0), LocalTime.of(18, 0))).toList());
         return businesses.save(business);
     }

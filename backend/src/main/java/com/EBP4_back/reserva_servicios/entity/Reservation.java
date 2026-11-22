@@ -51,6 +51,9 @@ public class Reservation {
     private String cancellationReason;
     @Column(name = "cancelled_at")
     private Instant cancelledAt;
+    // HU-24: set once the day-before reminder went out, so the hourly job never sends it twice.
+    @Column(name = "reminder_sent_at")
+    private Instant reminderSentAt;
 
     protected Reservation() { }
 
@@ -82,6 +85,12 @@ public class Reservation {
     public void reschedule(Instant newStartAt) {
         this.endAt = newStartAt.plus(Duration.between(startAt, endAt));
         this.startAt = newStartAt;
+        // The new date gets its own reminder.
+        this.reminderSentAt = null;
+    }
+
+    public void markReminded() {
+        this.reminderSentAt = Instant.now();
     }
 
     public void cancel(UserRole by, String reason) {

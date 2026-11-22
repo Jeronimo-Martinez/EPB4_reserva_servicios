@@ -1,0 +1,8 @@
+$kind: http-request
+name: Cancelar Reserva (cliente)
+order: 6000
+method: POST
+url: '{{baseUrl}}/api/v1/reservations/{{reservationId}}/cancel'
+headers:
+  - key: Authorization
+    value: Bearer {{token}}

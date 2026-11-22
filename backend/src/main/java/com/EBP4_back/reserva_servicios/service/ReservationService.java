@@ -7,6 +7,7 @@ import com.EBP4_back.reserva_servicios.entity.Reservation;
 import com.EBP4_back.reserva_servicios.entity.ServiceOffering;
 import com.EBP4_back.reserva_servicios.entity.User;
 import com.EBP4_back.reserva_servicios.enums.ReservationStatus;
+import com.EBP4_back.reserva_servicios.enums.UserRole;
 import com.EBP4_back.reserva_servicios.repository.ReservationRepository;
 import com.EBP4_back.reserva_servicios.repository.ScheduleBlockRepository;
 import com.EBP4_back.reserva_servicios.repository.ServiceOfferingRepository;
@@ -131,6 +132,24 @@ public class ReservationService {
         reservation.reschedule(newStartAt);
         notifier.notifyRescheduled(reservation, previousStartAt);
         return toResponse(reservation, "Reserva reprogramada exitosamente");
+    }
+
+    /** The client cancels its own active reservation: the slot frees itself and the provider is notified (HU-24). */
+    @Transactional
+    public ReservationResponse cancel(UUID id, String clientEmail) {
+        Reservation reservation = requireOwned(id, clientEmail, "EDITAR_RESERVA", AccessAuditService.NOT_ALLOWED_EDIT);
+        if (reservation.getStatus() == ReservationStatus.CANCELADA) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "La reserva ya fue cancelada");
+        }
+        if (reservation.getStatus() != ReservationStatus.CONFIRMADA) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Solo puedes cancelar reservas confirmadas");
+        }
+        if (reservation.hasStarted(Instant.now())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "No puedes cancelar una reserva que ya pasó");
+        }
+        reservation.cancel(UserRole.CLIENTE, null);
+        notifier.notifyCancelledByClient(reservation);
+        return toResponse(reservation, "Reserva cancelada");
     }
 
     // Free = no confirmed reservation, active hold or provider block (HU-10) overlaps it; ignoredId skips the one being moved.

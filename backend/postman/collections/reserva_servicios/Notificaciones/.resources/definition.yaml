@@ -1,0 +1,3 @@
+$kind: collection
+name: Notificaciones
+description: Bandeja de notificaciones de reservas del usuario con sesion (HU-24). Requieren Authorization: Bearer {{token}} de cualquier rol.

@@ -29,7 +29,8 @@ export type AppView =
   | 'reservar'
   | 'negocios'
   | 'negocio'
-  | 'perfil';
+  | 'perfil'
+  | 'notificaciones';
 
 interface NotificationState {
   type: 'success' | 'info' | 'error';

@@ -49,6 +49,11 @@ public class ReservationController {
         return reservationService.confirm(id, user.email());
     }
 
+    @PostMapping("/{id}/cancel")
+    public ReservationResponse cancel(@PathVariable UUID id, @AuthenticationPrincipal AuthUser user) {
+        return reservationService.cancel(id, user.email());
+    }
+
     @PostMapping("/{id}/reschedule")
     public ReservationResponse reschedule(@PathVariable UUID id, @Valid @RequestBody RescheduleRequest request,
             @AuthenticationPrincipal AuthUser user) {

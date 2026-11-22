@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import ProMarketLogo from './ProMarketLogo';
 import { useAuth } from '@/context/AuthContext';
+import { fetchNotifications } from '@/api/notifications';
 
 interface NavLink {
   label: string;
@@ -18,6 +19,15 @@ interface NavBarProps {
 export default function NavBar({ links: customLinks, trailing, avatarInitial: customAvatar }: NavBarProps) {
   const { user, isAuthenticated, currentView, navigate, logout, showNotification } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [unread, setUnread] = useState(0);
+
+  // Every screen mounts its own NavBar, so the count refreshes on each navigation (HU-24).
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    fetchNotifications()
+      .then((list) => setUnread(list.filter((n) => !n.read).length))
+      .catch(() => undefined);
+  }, [isAuthenticated]);
 
   // Navegación limpia y consistente
   const defaultLinks: NavLink[] = [];
@@ -144,6 +154,25 @@ export default function NavBar({ links: customLinks, trailing, avatarInitial: cu
               </button>
             ))}
           </nav>
+
+          {isAuthenticated && (
+            <button
+              type="button"
+              onClick={() => navigate('notificaciones')}
+              aria-label={unread ? `Notificaciones, ${unread} sin leer` : 'Notificaciones'}
+              className={`relative w-9 h-9 rounded-full flex items-center justify-center transition-colors cursor-pointer border-none
+                ${currentView === 'notificaciones' ? 'text-[#005146] bg-[#e6f0ef]' : 'text-[#66716c] bg-transparent hover:text-[#18211e] hover:bg-[#f2f3ee]'}`}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              {unread > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[#d94f41] text-white text-[10px] font-bold flex items-center justify-center">
+                  {unread > 9 ? '9+' : unread}
+                </span>
+              )}
+            </button>
+          )}
 
           {/* Acciones de usuario autenticado o invitado consistente */}
           {!isAuthenticated ? (

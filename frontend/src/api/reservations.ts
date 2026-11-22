@@ -27,6 +27,11 @@ export async function rescheduleReservation(id: string, startAt: string): Promis
   });
 }
 
+/** El cliente cancela su reserva activa; el proveedor recibe una notificación. 409 si ya pasó o ya estaba cancelada. */
+export async function cancelMyReservation(id: string): Promise<ReservationResponse> {
+  return request<ReservationResponse>(`/api/v1/reservations/${id}/cancel`, { method: 'POST' });
+}
+
 /** Reservas confirmadas y canceladas del cliente con sesión (el backend lo identifica por el token), por fecha ascendente. */
 export async function fetchMyReservations(): Promise<ReservationResponse[]> {
   return request<ReservationResponse[]>('/api/v1/reservations');
