@@ -205,6 +205,42 @@ Ejemplo con cURL:
 curl -X POST http://localhost:8080/api/v1/auth/login -H "Content-Type: application/json" -d "{\"email\":\"cliente.demo@example.com\",\"password\":\"Cliente123\"}"
 ```
 
+## Recuperación de contraseña (HU-04 / HA-04)
+
+Endpoints públicos (sin token). Flujo de las pantallas: solicitar código → ingresar código → crear nueva contraseña → confirmación.
+
+| Paso | Endpoint | Body |
+|---|---|---|
+| 1. Solicitar código | `POST /api/v1/auth/password-recovery` | `{ "email" }` |
+| 2. Verificar código | `POST /api/v1/auth/password-recovery/verify-code` | `{ "email", "code" }` |
+| 3. Restablecer | `POST /api/v1/auth/password-recovery/reset` | `{ "email", "code", "newPassword", "confirmPassword" }` |
+
+**1. Solicitar código.** Siempre responde `200` con el mismo mensaje, exista o no la cuenta (no revela correos registrados):
+
+```json
+{
+  "message": "Si el correo esta registrado, recibiras un codigo para crear una nueva contrasena. El codigo vence en 10 minutos",
+  "email": "pepe@gmail.com"
+}
+```
+
+Solo si el correo pertenece a una cuenta verificada se genera un código aleatorio de 6 dígitos, válido 10 minutos y de un solo uso, que se envía por correo de forma asíncrona (en el perfil demo se registra en el log). Pedir un código nuevo invalida el anterior.
+
+**2. Verificar código.** Comprueba el código sin consumirlo para pasar a la pantalla de nueva contraseña. Responde `200` con `"Codigo verificado. Ya puedes crear una nueva contrasena"`.
+
+**3. Restablecer.** Vuelve a validar el código, aplica la misma regla de contraseña que el registro y además exige que coincida con la confirmación y que sea diferente a la actual. Si todo es correcto: consume el código, cambia la contraseña, **cierra todas las sesiones abiertas**, levanta un posible bloqueo de login y envía un correo avisando del cambio. Responde `200` con `"Tu contrasena se cambio correctamente. Ya puedes iniciar sesion con la nueva contrasena"`.
+
+Errores de los pasos 2 y 3:
+
+| Status | Mensaje | Cuándo |
+|---|---|---|
+| `400` | `El codigo no es valido` | Código incorrecto, ya usado, o correo sin código (mismo mensaje para no revelar cuentas) |
+| `410` | `El codigo expiro. Solicita uno nuevo` | El código es correcto pero pasaron más de 10 minutos. La interfaz debe ofrecer volver al paso 1 |
+| `429` | `Demasiados codigos incorrectos. La recuperacion de contrasena fue bloqueada temporalmente. Intenta de nuevo mas tarde` | Tras 5 códigos incorrectos (HA-04) |
+| `400` | `Las contrasenas no coinciden` / `La nueva contrasena debe ser diferente a la actual` / regla de contraseña | Solo en el paso 3. No consumen el código |
+
+**Mitigaciones HA-04:** el código se guarda como hash SHA-256 y se compara en tiempo constante; tras 5 códigos incorrectos la recuperación de ese correo se bloquea 15 minutos, el código vigente se invalida y se avisa al dueño por correo. El contador también aplica a correos no registrados, para que el bloqueo no revele qué cuentas existen. Los valores se configuran con `app.password-recovery.code-minutes`, `max-attempts` y `block-minutes`. Como en el login, el contador de intentos vive en memoria y se reinicia con el servidor.
+
 ## Gestión de servicios (Proveedor)
 
 ### Crear servicio
@@ -319,6 +355,89 @@ Retorna un solo servicio con toda su información.
 
 Retorna el arreglo de categorías con `code` y `label` (ver *Categoría del servicio*).
 
+## Reprogramación de reserva (HU-19)
+
+Requieren `Authorization: Bearer {token}` de un `CLIENTE` dueño de la reserva (otro cliente recibe `403`). Solo se reprograman reservas `CONFIRMADA` cuya fecha y hora aún no pasaron. La reserva conserva su `id`, precio y estado; solo cambian `startAt` y `endAt`.
+
+| Pantalla | Endpoint | Respuesta |
+|---|---|---|
+| 02 Elegir nuevo horario | `GET /api/v1/reservations/{id}/reschedule/availability?from=AAAA-MM-DD&to=AAAA-MM-DD` | Mismo formato que la disponibilidad del catálogo |
+| 02 → 03 Seleccionar | `POST /api/v1/reservations/{id}/reschedule` con `{ "startAt": "2026-11-17T14:30:00Z" }` | `201` con el resumen (horario anterior y nuevo) |
+| 03 Continuar | `POST /api/v1/reservations/{id}/reschedule/confirm` | `200` reserva reprogramada |
+| 03 Cambiar selección / Cancelar | `DELETE /api/v1/reservations/{id}/reschedule` | `200` la reserva conserva su horario |
+
+**Disponibilidad.** Devuelve solo los horarios realmente libres del proveedor: dentro de su horario de atención, compatibles con la duración del servicio y sin cruces con otras reservas, bloqueos temporales ni bloqueos del proveedor (HU-10). El horario propio de la reserva no cuenta como ocupado (se libera al confirmar), pero el horario actual no se ofrece. Sin horarios: `days: []` y `message: "No hay horarios disponibles"`.
+
+**Seleccionar.** Bloquea el nuevo horario durante 10 minutos (igual que al reservar), sin tocar todavía la reserva. Respuesta:
+
+```json
+{
+  "message": "Al confirmar, el horario anterior se liberara y el nuevo quedara reservado. Centro Vital recibira una notificacion con ambos horarios",
+  "reservationId": "…",
+  "status": "CONFIRMADA",
+  "businessName": "Centro Vital",
+  "serviceName": "Masaje relajante",
+  "durationMinutes": 60,
+  "previousStartAt": "2026-11-16T15:00:00Z",
+  "previousEndAt": "2026-11-16T16:00:00Z",
+  "newStartAt": "2026-11-17T14:30:00Z",
+  "newEndAt": "2026-11-17T15:30:00Z",
+  "holdExpiresAt": "2026-11-12T20:10:00Z"
+}
+```
+
+**Confirmar.** Mueve la reserva al nuevo horario, libera el anterior y notifica al proveedor por correo con ambos horarios. Responde `"Tu reserva fue reprogramada exitosamente"` con los mismos campos (`holdExpiresAt` nulo).
+
+**Cancelar.** Elimina el bloqueo del nuevo horario, que vuelve a quedar disponible; la reserva y su horario original no cambian. Responde `"No se aplico la reprogramacion. Tu reserva mantiene su fecha y hora originales"` con `newStartAt` nulo.
+
+Errores:
+
+| Status | Mensaje |
+|---|---|
+| `409` | `No puedes reprogramar una reserva que ya pasó` |
+| `409` | `No puedes reprogramar una reserva cancelada` |
+| `409` | `Solo puedes reprogramar reservas confirmadas` |
+| `409` | `El horario seleccionado ya no esta disponible` |
+| `409` | `No hay un cambio de horario pendiente. Selecciona un nuevo horario` (confirmar sin haber seleccionado) |
+| `400` | `Selecciona un horario diferente al actual`, `La fecha y la hora deben ser futuras` o fuera del horario de atención |
+| `410` | `El tiempo para confirmar el cambio expiro. Selecciona nuevamente la fecha y la hora` |
+
+## Perfil del negocio (HU-06)
+
+Solo rol `PROVEEDOR`; el negocio sale del token, así que nadie edita uno ajeno.
+
+`GET /api/v1/business/profile` → `200 { message, businessId, name, category, description, address, phone, email }`.
+
+`PUT /api/v1/business/profile`
+
+| Campo | Regla |
+|---|---|
+| `name` | Obligatorio, 2–150 caracteres |
+| `category` | Una categoría del catálogo, por etiqueta (`"Salud y Bienestar"`) o clave (`"SALUD_Y_BIENESTAR"`); se guarda como etiqueta. La categoría actual se acepta tal cual |
+| `description` | Opcional, máx. 300 |
+| `address` | Obligatoria, máx. 255 |
+| `phone` | Obligatorio, formato `+57 300 555 1234` (es el teléfono de la cuenta del proveedor) |
+
+Responde `200` con `message: "Perfil del negocio actualizado correctamente"`. Cualquier dato inválido responde `400` con el motivo y no guarda nada. El **correo** es de solo lectura: no está en el cuerpo y, si se envía, se ignora. Los cambios se ven de inmediato en `GET /api/v1/catalog/businesses/{id}`.
+
+## Historial de reservas del proveedor (HU-22)
+
+`GET /api/v1/schedule/history?status=ESTADO` (solo `PROVEEDOR`; `status` opcional: `CONFIRMADA`, `ATENDIDA`, `NO_ASISTIO`, `CANCELADA`; otro valor → `400 "Estado de reserva no valido"`).
+
+```json
+{
+  "status": null,
+  "message": null,
+  "total": 1,
+  "reservations": [
+    { "id": "…", "code": "R-1A2B", "startAt": "2026-11-18T15:00:00Z", "endAt": "2026-11-18T16:00:00Z",
+      "clientName": "Laura Gomez", "serviceName": "Masaje relajante", "durationMinutes": 60, "status": "CONFIRMADA" }
+  ]
+}
+```
+
+Lista las reservas del negocio de la más reciente a la más antigua, sin bloqueos temporales (`PENDIENTE`) ni reservas de otros negocios. Vacía: `message` = `"Aun no hay reservas en el historial"` (sin filtro) o `"No hay reservas con ese estado"`. Los estados `ATENDIDA` y `NO_ASISTIO` se añadieron al modelo para el historial; todavía nada los asigna (HU de registro de asistencia pendiente).
+
 ## Datos de muestra
 
 Para probar sin PostgreSQL, iniciar con el perfil `demo`:
@@ -344,6 +463,7 @@ El perfil usa H2 en memoria. El usuario de muestra recomendado es `cliente.demo@
 |---|---|---|
 | `users` | Usuarios clientes/proveedores | `id`, `first_name`, `last_name`, `email`, `phone`, `password_hash`, `role`, `terms_accepted`, `is_verified`, `created_at` |
 | `verification_codes` | Códigos de activación | `id`, `user_id`, `code`, `expires_at`, `is_used` |
+| `password_reset_codes` | Códigos de recuperación de contraseña | `id`, `user_id`, `code_hash`, `expires_at`, `is_used`, `created_at` |
 | `businesses` | Negocios de proveedores | `id`, `user_id`, `name`, `category`, `description`, `address`, `created_at` |
 | `services` | Servicios ofrecidos | `id`, `business_id`, `name`, `category`, `description`, `duration_minutes`, `price`, `available`, `created_at` |
 
@@ -358,4 +478,4 @@ Los identificadores son UUID. El correo es único, `role` admite `CLIENTE` o `PR
 
 Estos comandos se ejecutan desde la carpeta `backend`. Desde la raíz del repositorio puede usarse `cd backend` antes de ejecutarlos.
 
-Las pruebas cubren registro, verificación, reenvío de código, inicio de sesión exitoso, credenciales incorrectas, correo inexistente, campos vacíos, registro de proveedor y CRUD de servicios.
+Las pruebas cubren registro, verificación, reenvío de código, inicio de sesión exitoso, credenciales incorrectas, correo inexistente, campos vacíos, registro de proveedor, CRUD de servicios y recuperación de contraseña (código correcto, incorrecto, vencido, de un solo uso, correo no registrado y bloqueo por intentos).

@@ -141,20 +141,26 @@ class ReservationChangesTest {
         reschedule(client, id, at(monday, 7)).andExpect(status().isBadRequest());
         reschedule(newUser(UserRole.CLIENTE), id, at(monday, 11)).andExpect(status().isForbidden());
 
+        // Selecting the new slot only holds it; the change applies when the client confirms (HU-19 flow).
         reschedule(client, id, at(monday, 11))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.newStartAt").value(at(monday, 11).toString()))
+                .andExpect(jsonPath("$.newEndAt").value(at(monday, 12).toString()));
+        mockMvc.perform(post("/api/v1/reservations/" + id + "/reschedule/confirm").header("Authorization", bearer(client)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("Reserva reprogramada exitosamente"))
+                .andExpect(jsonPath("$.message").value("Tu reserva fue reprogramada exitosamente"));
+        mockMvc.perform(get("/api/v1/reservations/" + id).header("Authorization", bearer(client)))
                 .andExpect(jsonPath("$.startAt").value(at(monday, 11).toString()))
                 .andExpect(jsonPath("$.endAt").value(at(monday, 12).toString()));
         availability(service, monday, monday)
                 .andExpect(jsonPath("$.days[0].slots", hasItem(at(monday, 9).toString())))
                 .andExpect(jsonPath("$.days[0].slots", not(hasItem(at(monday, 11).toString()))));
-        // HU-24, escenario 3: both sides get the previous and the new time.
+        // HU-24, escenario 3: both sides get the previous slot and the new one, start and end.
         inbox(client)
                 .andExpect(jsonPath("$[0].type").value("REPROGRAMACION"))
                 .andExpect(jsonPath("$[0].title").value("Tu reserva fue reprogramada"))
-                .andExpect(jsonPath("$[0].body", containsString("09:00 · Nuevo horario: ")))
-                .andExpect(jsonPath("$[0].body", containsString("11:00.")));
+                .andExpect(jsonPath("$[0].body", containsString("09:00 – 10:00 · Nuevo horario: ")))
+                .andExpect(jsonPath("$[0].body", containsString("11:00 – 12:00.")));
         inbox(provider)
                 .andExpect(jsonPath("$[0].type").value("REPROGRAMACION"))
                 .andExpect(jsonPath("$[0].title").value("Usuario Prueba reprogramó su reserva"));

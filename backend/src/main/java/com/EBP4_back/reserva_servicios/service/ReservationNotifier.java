@@ -42,14 +42,19 @@ public class ReservationNotifier {
                 clientName(reservation) + " agendó " + service(reservation) + ".", when(reservation.getStartAt()));
     }
 
-    /** HU-19: both sides learn the previous and the new time. */
-    public void notifyRescheduled(Reservation reservation, Instant previousStartAt) {
-        String change = "Horario anterior: " + SHORT.format(previousStartAt)
-                + " · Nuevo horario: " + SHORT.format(reservation.getStartAt()) + ".";
+    /** HU-19 / HU-24: both sides learn the previous slot (now free) and the new one, start and end. */
+    public void notifyRescheduled(Reservation reservation, Instant previousStartAt, Instant previousEndAt) {
+        String change = "Horario anterior: " + range(previousStartAt, previousEndAt)
+                + " · Nuevo horario: " + range(reservation.getStartAt(), reservation.getEndAt()) + ".";
         notify(reservation.getClient(), NotificationType.REPROGRAMACION, "Tu reserva fue reprogramada", change,
                 business(reservation) + " · " + service(reservation));
         notify(provider(reservation), NotificationType.REPROGRAMACION, clientName(reservation) + " reprogramó su reserva",
                 change, service(reservation));
+    }
+
+    /** "23 de julio, 10:00 – 11:00" in Bogota time. */
+    private static String range(Instant start, Instant end) {
+        return SHORT.format(start) + " – " + TIME.format(end);
     }
 
     /** HU-20: the client learns the provider cancelled, with the reason when there is one. */

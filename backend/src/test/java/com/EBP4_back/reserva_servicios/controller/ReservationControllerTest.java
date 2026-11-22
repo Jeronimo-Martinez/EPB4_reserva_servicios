@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.EBP4_back.reserva_servicios.entity.Business;
 import com.EBP4_back.reserva_servicios.entity.ServiceOffering;
 import com.EBP4_back.reserva_servicios.entity.User;
+import com.EBP4_back.reserva_servicios.enums.ReservationStatus;
 import com.EBP4_back.reserva_servicios.enums.UserRole;
 import com.EBP4_back.reserva_servicios.repository.ServiceOfferingRepository;
 import com.EBP4_back.reserva_servicios.repository.UserRepository;
@@ -17,6 +18,7 @@ import jakarta.persistence.PersistenceContext;
 import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalAdjusters;
 import java.util.UUID;
 import java.util.regex.Matcher;
@@ -115,6 +117,113 @@ class ReservationControllerTest {
         confirm(id, otherClient()).andExpect(status().isForbidden());
     }
 
+    // HU-21: the client sees every reservation of the account and can filter by state.
+    @Test
+    void mineFiltersByStatusAndNeverListsExpiredHolds() throws Exception {
+        String client = otherClient();
+        UUID service = serviceId("Masaje Descontracturante");
+
+        String confirmed = holdId(client, service, slot(10));
+        confirm(confirmed, client);
+        String cancelled = holdId(client, service, slot(12));
+        confirm(cancelled, client);
+        setStatus(cancelled, ReservationStatus.CANCELADA);
+        // An abandoned hold expires and must never show up as a reservation of the client.
+        String expired = holdId(client, service, slot(17));
+        expireHold(expired);
+
+        mockMvc.perform(get("/api/v1/reservations").header("Authorization", bearer(client)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].id").value(confirmed))
+                .andExpect(jsonPath("$[0].status").value("CONFIRMADA"))
+                .andExpect(jsonPath("$[1].id").value(cancelled))
+                .andExpect(jsonPath("$[1].status").value("CANCELADA"));
+
+        mockMvc.perform(get("/api/v1/reservations").param("status", "CANCELADA")
+                        .header("Authorization", bearer(client)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].id").value(cancelled));
+
+        mockMvc.perform(get("/api/v1/reservations").param("status", "CONFIRMADA")
+                        .header("Authorization", bearer(client)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].id").value(confirmed));
+
+        // The expired hold is not a reservation, so filtering by PENDIENTE returns nothing.
+        mockMvc.perform(get("/api/v1/reservations").param("status", "PENDIENTE")
+                        .header("Authorization", bearer(client)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+
+        mockMvc.perform(get("/api/v1/reservations").param("status", "INVENTADA")
+                        .header("Authorization", bearer(client)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Estado de reserva no valido"));
+    }
+
+    // HU 3.3.1: cancelling frees the slot and a cancelled reservation cannot be cancelled again.
+    @Test
+    void clientCancelsOwnReservationAndFreesTheSlot() throws Exception {
+        Instant slot = freeSlot(9);
+        String id = holdId(CLIENT, serviceId("Masaje Descontracturante"), slot);
+        confirm(id, CLIENT).andExpect(status().isOk());
+
+        cancel(id, CLIENT).andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(id))
+                .andExpect(jsonPath("$.status").value("CANCELADA"))
+                .andExpect(jsonPath("$.message").value("Reserva cancelada"));
+
+        hold(otherClient(), serviceId("Masaje Descontracturante"), slot).andExpect(status().isCreated());
+        cancel(id, CLIENT).andExpect(status().isConflict());
+    }
+
+    @Test
+    void cannotCancelForeignOrPastReservation() throws Exception {
+        String id = holdId(CLIENT, serviceId("Masaje Descontracturante"), freeSlot(10));
+        confirm(id, CLIENT);
+        cancel(id, otherClient()).andExpect(status().isForbidden());
+
+        String past = holdId(CLIENT, serviceId("Masaje Descontracturante"), freeSlot(11));
+        confirm(past, CLIENT);
+        backdate(past);
+        cancel(past, CLIENT).andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("No se puede cancelar una reserva que ya paso"));
+    }
+
+    private ResultActions cancel(String id, String email) throws Exception {
+        return mockMvc.perform(post("/api/v1/reservations/" + id + "/cancel").header("Authorization", bearer(email)));
+    }
+
+    // Holds must start in the future, so past appointments are created first and moved back afterwards.
+    private void backdate(String id) {
+        Instant start = Instant.now().minus(2, ChronoUnit.HOURS);
+        new TransactionTemplate(transactionManager).executeWithoutResult(tx -> entityManager
+                .createQuery("UPDATE Reservation r SET r.startAt = :start, r.endAt = :end WHERE r.id = :id")
+                .setParameter("start", start)
+                .setParameter("end", start.plus(1, ChronoUnit.HOURS))
+                .setParameter("id", UUID.fromString(id))
+                .executeUpdate());
+    }
+
+    private void setStatus(String id, ReservationStatus status) {
+        new TransactionTemplate(transactionManager).executeWithoutResult(tx -> entityManager
+                .createQuery("UPDATE Reservation r SET r.status = :status WHERE r.id = :id")
+                .setParameter("status", status)
+                .setParameter("id", UUID.fromString(id))
+                .executeUpdate());
+    }
+
+    private void expireHold(String id) {
+        new TransactionTemplate(transactionManager).executeWithoutResult(tx -> entityManager
+                .createQuery("UPDATE Reservation r SET r.holdExpiresAt = :past WHERE r.id = :id")
+                .setParameter("past", Instant.now().minusSeconds(1))
+                .setParameter("id", UUID.fromString(id))
+                .executeUpdate());
+    }
+
     private ResultActions hold(String email, UUID serviceId, Instant startAt) throws Exception {
         return mockMvc.perform(post("/api/v1/reservations/holds").header("Authorization", bearer(email))
                 .contentType(MediaType.APPLICATION_JSON)
@@ -150,6 +259,12 @@ class ReservationControllerTest {
     // Centro Vital (demo data) attends Monday to Saturday 08:00-18:00 Bogota time.
     private Instant slot(int hour) {
         return LocalDate.now(Business.ZONE).with(TemporalAdjusters.next(DayOfWeek.MONDAY)).plusWeeks(4)
+                .atTime(hour, 0).atZone(Business.ZONE).toInstant();
+    }
+
+    // The other tests fill the Monday four weeks ahead, so the new scenarios use a later week.
+    private Instant freeSlot(int hour) {
+        return LocalDate.now(Business.ZONE).with(TemporalAdjusters.next(DayOfWeek.MONDAY)).plusWeeks(6)
                 .atTime(hour, 0).atZone(Business.ZONE).toInstant();
     }
 

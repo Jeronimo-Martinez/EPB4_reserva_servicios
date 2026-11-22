@@ -29,7 +29,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class RegistrationService {
-    private static final String PASSWORD_REQUIREMENTS = "La contrasena debe tener al menos 8 caracteres, una mayuscula, una minuscula y un numero";
     private static final String EMAIL_ALREADY_REGISTERED = "El correo electronico ya esta registrado";
     private static final String TERMS_REQUIRED = "Debe aceptar los terminos y condiciones";
     private static final String VERIFICATION_MESSAGE = "Se envio un codigo de verificacion al correo indicado";
@@ -43,11 +42,13 @@ public class RegistrationService {
     private final VerificationCodeSender codeSender;
     private final RecaptchaValidator recaptchaValidator;
     private final SessionService sessionService;
+    private final PasswordPolicy passwordPolicy;
     private final SecureRandom random = new SecureRandom();
 
     public RegistrationService(UserRepository userRepository, BusinessRepository businessRepository,
             VerificationCodeRepository codeRepository, PasswordEncoder passwordEncoder,
-            VerificationCodeSender codeSender, RecaptchaValidator recaptchaValidator, SessionService sessionService) {
+            VerificationCodeSender codeSender, RecaptchaValidator recaptchaValidator, SessionService sessionService,
+            PasswordPolicy passwordPolicy) {
         this.userRepository = userRepository;
         this.businessRepository = businessRepository;
         this.codeRepository = codeRepository;
@@ -55,6 +56,7 @@ public class RegistrationService {
         this.codeSender = codeSender;
         this.recaptchaValidator = recaptchaValidator;
         this.sessionService = sessionService;
+        this.passwordPolicy = passwordPolicy;
     }
 
     @Transactional
@@ -159,19 +161,13 @@ public class RegistrationService {
     }
 
     private void validatePassword(String password) {
-        if (!isStrongPassword(password)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, PASSWORD_REQUIREMENTS);
-        }
+        passwordPolicy.validate(password);
     }
 
     private void validateTerms(Boolean accepted) {
         if (!Boolean.TRUE.equals(accepted)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, TERMS_REQUIRED);
         }
-    }
-
-    private boolean isStrongPassword(String password) {
-        return password != null && password.matches("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).{8,}$");
     }
 
     private String normalizeEmail(String email) {

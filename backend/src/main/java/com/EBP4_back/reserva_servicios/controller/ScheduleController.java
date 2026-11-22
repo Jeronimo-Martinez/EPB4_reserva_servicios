@@ -4,6 +4,7 @@ import com.EBP4_back.reserva_servicios.dto.AgendaResponse;
 import com.EBP4_back.reserva_servicios.dto.BusinessHoursRequest;
 import com.EBP4_back.reserva_servicios.dto.BusinessHoursResponse;
 import com.EBP4_back.reserva_servicios.dto.CancelReservationRequest;
+import com.EBP4_back.reserva_servicios.dto.ReservationHistoryResponse;
 import com.EBP4_back.reserva_servicios.dto.ScheduleBlockRequest;
 import com.EBP4_back.reserva_servicios.enums.AgendaView;
 import com.EBP4_back.reserva_servicios.security.AuthUser;
@@ -56,6 +57,13 @@ public class ScheduleController {
     public AgendaResponse.Block createBlock(@Valid @RequestBody ScheduleBlockRequest request,
             @AuthenticationPrincipal AuthUser user) {
         return scheduleService.createBlock(request, user.email());
+    }
+
+    /** HU-22: historial de reservas del negocio; {@code status} opcional (CONFIRMADA, ATENDIDA, NO_ASISTIO, CANCELADA). */
+    @GetMapping("/history")
+    public ReservationHistoryResponse history(@AuthenticationPrincipal AuthUser user,
+            @RequestParam(value = "status", required = false) String status) {
+        return scheduleService.history(user.email(), status);
     }
 
     @PostMapping("/reservations/{id}/cancel")
