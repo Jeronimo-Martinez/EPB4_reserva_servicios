@@ -16,6 +16,8 @@ export const STATUS_META: Record<ReservationStatus, StatusMeta> = {
   PENDIENTE: { label: 'Pendiente', tone: 'bg-[#fdf6e3] text-[#8a6d1a] border-[#ecd9a0]' },
   CONFIRMADA: { label: 'Confirmada', tone: 'bg-[#e6f0ef] text-[#005146] border-[#b8d4d1]' },
   CANCELADA: { label: 'Cancelada', tone: 'bg-[#fdf1f0] text-[#d94f41] border-[#f2bfbb]' },
+  ATENDIDA: { label: 'Atendida', tone: 'bg-[#e6f0ef] text-[#005146] border-[#b8d4d1]' },
+  NO_ASISTIO: { label: 'No asistió', tone: 'bg-[#fff6e8] text-[#94611c] border-[#ead2a8]' },
 };
 
 /** El badge muestra siempre uno de los cinco estados reales, sin inventar etiquetas por fecha. */

@@ -1,0 +1,20 @@
+$kind: http-request
+name: Actualizar Perfil del Negocio
+order: 4000
+method: PUT
+url: '{{baseUrl}}/api/v1/business/profile'
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Centro Vital",
+      "category": "Salud y Bienestar",
+      "description": "Masajes, fisioterapia y bienestar integral.",
+      "address": "Calle 10 # 20-30, Medellin",
+      "phone": "+57 300 555 1234"
+    }

@@ -380,6 +380,23 @@ Pantalla `src/features/perfil/PerfilUsuario.tsx` (**Mi Perfil** en el menú del 
 #### `PUT /api/v1/profile`
 `{ "firstName": "María", "lastName": "González", "phone": "+57 310 458 6721" }`. Solo se pueden cambiar nombre, apellido y teléfono; el correo y el rol se ignoran aunque se envíen (en pantalla el correo aparece deshabilitado). Mismas validaciones que el registro: `400` con el mensaje si el nombre está vacío o el teléfono no tiene formato válido, y no se guarda nada.
 
+### 7. Perfil de mi negocio (HU-06)
+
+Pantalla `src/features/perfil/PerfilNegocio.tsx` (vista `perfil-negocio`, ítem **Perfil de Negocio** del panel del proveedor). Llamadas en `src/api/business.ts`; solo rol `PROVEEDOR`.
+
+- `GET /api/v1/business/profile` → `{ businessId, name, category, description, address, phone, email }`.
+- `PUT /api/v1/business/profile` con `{ name, category, description, address, phone }` → `200` con `message: "Perfil del negocio actualizado correctamente"`. Los cambios se ven de inmediato en el catálogo (`GET /api/v1/catalog/businesses/{id}`); la pantalla ofrece **Ver cómo lo ven los clientes** y actualiza el nombre del panel lateral.
+- **Correo de la cuenta**: campo restringido, deshabilitado ("Solo lectura"). Si se envía en el JSON, el backend lo ignora.
+- Validación (pantalla y backend): nombre 2–150 caracteres, categoría del catálogo (acepta la etiqueta o la clave del registro, p. ej. `SALUD_Y_BIENESTAR`, y la guarda como etiqueta), teléfono con formato válido, dirección obligatoria (máx. 255) y descripción de máx. 300. Un dato inválido responde `400` y no se guarda nada.
+
+### 8. Historial de reservas del proveedor (HU-22)
+
+Pantalla `src/features/agenda/HistorialReservas.tsx` (vista `historial-proveedor`, ítem **Reservas Recibidas** del panel del proveedor). Llamada en `src/api/schedule.ts`.
+
+- `GET /api/v1/schedule/history?status=` (opcional: `CONFIRMADA`, `ATENDIDA`, `NO_ASISTIO`, `CANCELADA`; otro valor → `400`). Devuelve `{ status, message, total, reservations: [{ id, code, startAt, endAt, clientName, serviceName, durationMinutes, status }] }` de la más reciente a la más antigua. Los bloqueos temporales no aparecen.
+- Filtros **Todas · Confirmada · Atendida · No asistió · Cancelada**. Sin reservas: estado vacío "Aún no hay reservas en el historial"; con un filtro sin resultados, "No hay reservas con ese estado" y **Volver al historial**.
+- `ATENDIDA` y `NO_ASISTIO` existen para el historial, pero todavía nada los asigna: lo hará la HU de registro de asistencia.
+
 ---
 
 ## Gestión de Estados Vacíos (Empty States)

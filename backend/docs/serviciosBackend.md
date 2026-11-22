@@ -402,6 +402,42 @@ Errores:
 | `400` | `Selecciona un horario diferente al actual`, `La fecha y la hora deben ser futuras` o fuera del horario de atención |
 | `410` | `El tiempo para confirmar el cambio expiro. Selecciona nuevamente la fecha y la hora` |
 
+## Perfil del negocio (HU-06)
+
+Solo rol `PROVEEDOR`; el negocio sale del token, así que nadie edita uno ajeno.
+
+`GET /api/v1/business/profile` → `200 { message, businessId, name, category, description, address, phone, email }`.
+
+`PUT /api/v1/business/profile`
+
+| Campo | Regla |
+|---|---|
+| `name` | Obligatorio, 2–150 caracteres |
+| `category` | Una categoría del catálogo, por etiqueta (`"Salud y Bienestar"`) o clave (`"SALUD_Y_BIENESTAR"`); se guarda como etiqueta. La categoría actual se acepta tal cual |
+| `description` | Opcional, máx. 300 |
+| `address` | Obligatoria, máx. 255 |
+| `phone` | Obligatorio, formato `+57 300 555 1234` (es el teléfono de la cuenta del proveedor) |
+
+Responde `200` con `message: "Perfil del negocio actualizado correctamente"`. Cualquier dato inválido responde `400` con el motivo y no guarda nada. El **correo** es de solo lectura: no está en el cuerpo y, si se envía, se ignora. Los cambios se ven de inmediato en `GET /api/v1/catalog/businesses/{id}`.
+
+## Historial de reservas del proveedor (HU-22)
+
+`GET /api/v1/schedule/history?status=ESTADO` (solo `PROVEEDOR`; `status` opcional: `CONFIRMADA`, `ATENDIDA`, `NO_ASISTIO`, `CANCELADA`; otro valor → `400 "Estado de reserva no valido"`).
+
+```json
+{
+  "status": null,
+  "message": null,
+  "total": 1,
+  "reservations": [
+    { "id": "…", "code": "R-1A2B", "startAt": "2026-11-18T15:00:00Z", "endAt": "2026-11-18T16:00:00Z",
+      "clientName": "Laura Gomez", "serviceName": "Masaje relajante", "durationMinutes": 60, "status": "CONFIRMADA" }
+  ]
+}
+```
+
+Lista las reservas del negocio de la más reciente a la más antigua, sin bloqueos temporales (`PENDIENTE`) ni reservas de otros negocios. Vacía: `message` = `"Aun no hay reservas en el historial"` (sin filtro) o `"No hay reservas con ese estado"`. Los estados `ATENDIDA` y `NO_ASISTIO` se añadieron al modelo para el historial; todavía nada los asigna (HU de registro de asistencia pendiente).
+
 ## Datos de muestra
 
 Para probar sin PostgreSQL, iniciar con el perfil `demo`:

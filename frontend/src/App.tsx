@@ -6,19 +6,17 @@ import { CatalogoServicios } from '@/features/cliente';
 import { InicioSesion, RegistroCliente, RegistroProveedor } from '@/features/auth';
 import { GestionServicios } from '@/features/servicios';
 import { HorarioAtencion } from '@/features/horarios';
-import { AgendaNegocio } from '@/features/agenda';
+import { AgendaNegocio, HistorialReservas } from '@/features/agenda';
 import { MisReservas, ReprogramarReserva, ReservarCita } from '@/features/reservas';
 import { DetalleNegocio, ResultadosNegocios } from '@/features/negocios';
-import { PerfilUsuario } from '@/features/perfil';
+import { PerfilNegocio, PerfilUsuario } from '@/features/perfil';
 import {
   RecuperacionContrasena,
   ActualizacionPerfilUsuario,
-  ActualizacionPerfilNegocio,
   BloqueoFechasHorarios,
   CancelacionReservaCliente,
   ReprogramacionReserva,
   CancelacionReservaProveedor,
-  HistorialReservasProveedor,
   RegistroAsistenciaReserva,
   NotificacionesEstadoReservas,
   ReporteUsoServicios,
@@ -62,7 +60,7 @@ function MainRouter() {
       case 'perfil-cliente':
         return <ActualizacionPerfilUsuario />;
       case 'perfil-negocio':
-        return <ActualizacionPerfilNegocio />;
+        return <PerfilNegocio />;
       case 'bloqueo-horarios':
         return <BloqueoFechasHorarios />;
       case 'cancelar-reserva-cliente':
@@ -72,7 +70,7 @@ function MainRouter() {
       case 'cancelar-reserva-proveedor':
         return <CancelacionReservaProveedor />;
       case 'historial-proveedor':
-        return <HistorialReservasProveedor />;
+        return <HistorialReservas />;
       case 'asistencia-reserva':
         return <RegistroAsistenciaReserva />;
       case 'notificaciones':
