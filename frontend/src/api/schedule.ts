@@ -101,3 +101,34 @@ export async function cancelReservationByProvider(id: string, reason: string): P
     body: JSON.stringify({ reason: reason.trim() || null }),
   });
 }
+
+// ─── HU-22 Historial de reservas (proveedor) ───
+
+/** Estados que puede tener una reserva del historial; ATENDIDA y NO_ASISTIO los asigna la HU de asistencia. */
+export type HistoryStatus = 'CONFIRMADA' | 'ATENDIDA' | 'NO_ASISTIO' | 'CANCELADA';
+
+export interface ReservationHistoryItem {
+  id: string;
+  /** Código corto para mostrar, p. ej. "R-1A2B". */
+  code: string;
+  startAt: string;
+  endAt: string;
+  clientName: string;
+  serviceName: string;
+  durationMinutes: number;
+  status: HistoryStatus;
+}
+
+export interface ReservationHistoryResponse {
+  status: HistoryStatus | null;
+  /** Solo cuando la lista está vacía. */
+  message: string | null;
+  total: number;
+  reservations: ReservationHistoryItem[];
+}
+
+/** Reservas del negocio con sesión, de la más reciente a la más antigua; `status` filtra por estado. */
+export async function fetchReservationHistory(status?: HistoryStatus): Promise<ReservationHistoryResponse> {
+  const qs = status ? `?status=${status}` : '';
+  return request<ReservationHistoryResponse>(`/api/v1/schedule/history${qs}`);
+}

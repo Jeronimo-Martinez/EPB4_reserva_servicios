@@ -152,6 +152,16 @@ Response `200 OK`:
 }
 ```
 
+#### Recuperación de contraseña (HU-04 / HA-04)
+Pantalla `src/features/auth/RecuperarContrasena.tsx`, abierta desde **¿Olvidaste tu contraseña?** en el inicio de sesión. Las llamadas están en `src/api/auth.ts` y son públicas (sin token). Pasos:
+
+1. **Recupera tu contraseña** → `POST /api/v1/auth/password-recovery` `{ email }`. Responde siempre lo mismo, exista o no la cuenta.
+2. **Ingresa el código** (6 dígitos, vence en 10 minutos) → `POST /api/v1/auth/password-recovery/verify-code` `{ email, code }`. Incluye **Reenviar código** y **Usar otro correo**.
+3. **Crea una nueva contraseña** → `POST /api/v1/auth/password-recovery/reset` `{ email, code, newPassword, confirmPassword }`. Misma regla que el registro: 8+ caracteres, mayúscula, minúscula y número.
+4. **Contraseña actualizada** → vuelve al inicio de sesión con el correo escrito.
+
+Errores: `400` código no válido (mensaje bajo el campo), `410` código expirado y `429` recuperación bloqueada tras 5 códigos incorrectos (aviso con **Solicitar un nuevo código**).
+
 ---
 
 ### 2. Catálogo y Servicios de Proveedores (Futura Integración Backend)
@@ -265,8 +275,13 @@ Confirma la reserva (botón **Confirmar reserva**), sin cuerpo. Responde `200` c
 #### Mis reservas — `GET /api/v1/reservations`
 Pantalla `src/features/reservas/MisReservas.tsx` (**Mis Reservas** en la barra del cliente o **Ver mis reservas** al confirmar). Lista solo las reservas `CONFIRMADA` del cliente con sesión, ordenadas por fecha; el backend lo identifica por el token, así que nunca devuelve reservas de otros clientes (HUS-29). Los bloqueos temporales no aparecen. La pantalla las separa en **Próximas citas** (aún no terminan) y **Citas pasadas** (la más reciente primero). Responde `200` con una lista de objetos como el de la confirmación (`message: null`), `401` sin sesión y `403` para proveedores.
 
-#### Reprogramar (HU-19) — `POST /api/v1/reservations/{id}/reschedule`
-Botón **Reprogramar reserva** de cada tarjeta en "Mis reservas" (`src/features/reservas/ReprogramarReserva.tsx`). La pantalla pide la disponibilidad del servicio (`serviceId` viene en la reserva), muestra las fechas y horas libres y luego un resumen con el horario anterior y el nuevo; **Cancelar** vuelve sin cambiar nada. Cuerpo `{ "startAt": "2026-11-23T16:00:00Z" }`. Responde `200` con la reserva actualizada (el horario anterior queda libre y el proveedor recibe un correo con ambos horarios); `409` si el horario ya no está libre, si la reserva está cancelada o si ya pasó; `400` fuera del horario de atención. Si no hay cupos, la pantalla muestra "No hay horarios disponibles".
+#### Reprogramación de reserva (HU-19)
+Pantalla `src/features/reservas/ReprogramarReserva.tsx` (vista `reprogramar`), abierta con **Reprogramar cita** en las tarjetas de reservas confirmadas y futuras de Mis Reservas; las pasadas o canceladas muestran **Ver detalle**. Las llamadas están en `src/api/reservations.ts`. Pasos (mockups HU-19 01–03):
+
+1. **Detalle con reprogramación** → botón **Reprogramar reserva**: `GET /api/v1/reservations/{id}/reschedule/availability?from&to` (28 días). Si la reserva ya pasó o fue cancelada, el backend responde `409` y la pantalla muestra el aviso sin avanzar.
+2. **Elige un nuevo horario**: solo fechas y horas realmente libres (sin reservas, bloqueos temporales ni bloqueos del proveedor, HU-10); sin cupos muestra **No hay horarios disponibles**. **Revisar cambio** → `POST /api/v1/reservations/{id}/reschedule` `{ startAt }`, que aparta el horario 10 minutos (`201`).
+3. **Revisa el cambio de horario** (anterior y nuevo): **Continuar** → `POST .../reschedule/confirm`; **Cambiar selección** y **Cancelar** → `DELETE .../reschedule` (la reserva conserva su horario y el elegido se libera).
+4. **Reserva reprogramada** → **Ver mis reservas**; el proveedor recibe un correo con ambos horarios. Si el tiempo para confirmar expiró (`410`), vuelve a la selección con un aviso.
 
 Las reservas canceladas también aparecen en "Mis reservas" (`status: "CANCELADA"`, `cancelledBy`, `cancellationReason`).
 
@@ -364,6 +379,23 @@ Pantalla `src/features/perfil/PerfilUsuario.tsx` (**Mi Perfil** en el menú del 
 
 #### `PUT /api/v1/profile`
 `{ "firstName": "María", "lastName": "González", "phone": "+57 310 458 6721" }`. Solo se pueden cambiar nombre, apellido y teléfono; el correo y el rol se ignoran aunque se envíen (en pantalla el correo aparece deshabilitado). Mismas validaciones que el registro: `400` con el mensaje si el nombre está vacío o el teléfono no tiene formato válido, y no se guarda nada.
+
+### 7. Perfil de mi negocio (HU-06)
+
+Pantalla `src/features/perfil/PerfilNegocio.tsx` (vista `perfil-negocio`, ítem **Perfil de Negocio** del panel del proveedor). Llamadas en `src/api/business.ts`; solo rol `PROVEEDOR`.
+
+- `GET /api/v1/business/profile` → `{ businessId, name, category, description, address, phone, email }`.
+- `PUT /api/v1/business/profile` con `{ name, category, description, address, phone }` → `200` con `message: "Perfil del negocio actualizado correctamente"`. Los cambios se ven de inmediato en el catálogo (`GET /api/v1/catalog/businesses/{id}`); la pantalla ofrece **Ver cómo lo ven los clientes** y actualiza el nombre del panel lateral.
+- **Correo de la cuenta**: campo restringido, deshabilitado ("Solo lectura"). Si se envía en el JSON, el backend lo ignora.
+- Validación (pantalla y backend): nombre 2–150 caracteres, categoría del catálogo (acepta la etiqueta o la clave del registro, p. ej. `SALUD_Y_BIENESTAR`, y la guarda como etiqueta), teléfono con formato válido, dirección obligatoria (máx. 255) y descripción de máx. 300. Un dato inválido responde `400` y no se guarda nada.
+
+### 8. Historial de reservas del proveedor (HU-22)
+
+Pantalla `src/features/agenda/HistorialReservas.tsx` (vista `historial-proveedor`, ítem **Reservas Recibidas** del panel del proveedor). Llamada en `src/api/schedule.ts`.
+
+- `GET /api/v1/schedule/history?status=` (opcional: `CONFIRMADA`, `ATENDIDA`, `NO_ASISTIO`, `CANCELADA`; otro valor → `400`). Devuelve `{ status, message, total, reservations: [{ id, code, startAt, endAt, clientName, serviceName, durationMinutes, status }] }` de la más reciente a la más antigua. Los bloqueos temporales no aparecen.
+- Filtros **Todas · Confirmada · Atendida · No asistió · Cancelada**. Sin reservas: estado vacío "Aún no hay reservas en el historial"; con un filtro sin resultados, "No hay reservas con ese estado" y **Volver al historial**.
+- `ATENDIDA` y `NO_ASISTIO` existen para el historial, pero todavía nada los asigna: lo hará la HU de registro de asistencia.
 
 ---
 

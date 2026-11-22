@@ -51,8 +51,20 @@ public class Reservation {
     private String cancellationReason;
     @Column(name = "cancelled_at")
     private Instant cancelledAt;
+    /** HU-19: si no es nulo, este registro es el bloqueo temporal del nuevo horario de esa reserva. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reschedule_of_id")
+    private Reservation rescheduleOf;
 
     protected Reservation() { }
+
+    /** Bloquea temporalmente el nuevo horario elegido para reprogramar {@code original}, sin tocarla todavia. */
+    public static Reservation rescheduleHold(Reservation original, Instant startAt, Instant holdExpiresAt) {
+        Reservation hold = new Reservation(original.client, original.service, startAt, holdExpiresAt);
+        hold.totalPrice = original.totalPrice;
+        hold.rescheduleOf = original;
+        return hold;
+    }
 
     public Reservation(User client, ServiceOffering service, Instant startAt, Instant holdExpiresAt) {
         this.client = client;
@@ -79,16 +91,26 @@ public class Reservation {
         return !startAt.isAfter(now);
     }
 
+    /** HU-19: mueve la reserva al nuevo horario conservando su id, precio, estado y duracion. */
     public void reschedule(Instant newStartAt) {
         this.endAt = newStartAt.plus(Duration.between(startAt, endAt));
         this.startAt = newStartAt;
     }
 
+    // A cancelled reservation keeps no hold: findBlocking only blocks CONFIRMADA rows and live holds,
+    // so the slot is free again without touching anything else. The history records who cancelled (HU-20).
     public void cancel(UserRole by, String reason) {
         this.status = ReservationStatus.CANCELADA;
+        this.holdExpiresAt = null;
         this.cancelledBy = by;
         this.cancellationReason = reason;
         this.cancelledAt = Instant.now();
+    }
+
+    public boolean isRescheduleHold() { return rescheduleOf != null; }
+
+    public boolean isRescheduleOf(UUID reservationId) {
+        return rescheduleOf != null && rescheduleOf.getId().equals(reservationId);
     }
 
     public UUID getId() { return id; }

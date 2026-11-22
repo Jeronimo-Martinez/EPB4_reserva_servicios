@@ -1,0 +1,8 @@
+$kind: http-request
+name: Consultar Perfil del Negocio
+order: 3000
+method: GET
+url: '{{baseUrl}}/api/v1/business/profile'
+headers:
+  - key: Authorization
+    value: Bearer {{token}}

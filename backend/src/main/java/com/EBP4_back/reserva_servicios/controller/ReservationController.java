@@ -1,20 +1,26 @@
 package com.EBP4_back.reserva_servicios.controller;
 
-import com.EBP4_back.reserva_servicios.dto.ReservationHoldRequest;
+import com.EBP4_back.reserva_servicios.dto.AvailabilityResponse;
 import com.EBP4_back.reserva_servicios.dto.RescheduleRequest;
+import com.EBP4_back.reserva_servicios.dto.RescheduleResponse;
+import com.EBP4_back.reserva_servicios.dto.ReservationHoldRequest;
 import com.EBP4_back.reserva_servicios.dto.ReservationResponse;
 import com.EBP4_back.reserva_servicios.security.AuthUser;
 import com.EBP4_back.reserva_servicios.service.ReservationService;
 import jakarta.validation.Valid;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -35,8 +41,9 @@ public class ReservationController {
     }
 
     @GetMapping
-    public List<ReservationResponse> mine(@AuthenticationPrincipal AuthUser user) {
-        return reservationService.listOwn(user.id());
+    public List<ReservationResponse> mine(@RequestParam(value = "status", required = false) String status,
+            @AuthenticationPrincipal AuthUser user) {
+        return reservationService.listOwn(user.id(), status);
     }
 
     @GetMapping("/{id}")
@@ -49,9 +56,34 @@ public class ReservationController {
         return reservationService.confirm(id, user.email());
     }
 
+    @PostMapping("/{id}/cancel")
+    public ReservationResponse cancel(@PathVariable UUID id, @AuthenticationPrincipal AuthUser user) {
+        return reservationService.cancel(id, user.email());
+    }
+
+    // HU-19 Reprogramacion de reserva: ver horarios -> seleccionar (bloqueo temporal) -> confirmar o cancelar.
+
+    @GetMapping("/{id}/reschedule/availability")
+    public AvailabilityResponse rescheduleAvailability(@PathVariable UUID id, @AuthenticationPrincipal AuthUser user,
+            @RequestParam(value = "from", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(value = "to", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return reservationService.rescheduleAvailability(id, user.email(), from, to);
+    }
+
     @PostMapping("/{id}/reschedule")
-    public ReservationResponse reschedule(@PathVariable UUID id, @Valid @RequestBody RescheduleRequest request,
+    @ResponseStatus(HttpStatus.CREATED)
+    public RescheduleResponse holdReschedule(@PathVariable UUID id, @Valid @RequestBody RescheduleRequest request,
             @AuthenticationPrincipal AuthUser user) {
-        return reservationService.reschedule(id, request.startAt(), user.email());
+        return reservationService.holdReschedule(id, request, user.email());
+    }
+
+    @PostMapping("/{id}/reschedule/confirm")
+    public RescheduleResponse confirmReschedule(@PathVariable UUID id, @AuthenticationPrincipal AuthUser user) {
+        return reservationService.confirmReschedule(id, user.email());
+    }
+
+    @DeleteMapping("/{id}/reschedule")
+    public RescheduleResponse cancelReschedule(@PathVariable UUID id, @AuthenticationPrincipal AuthUser user) {
+        return reservationService.cancelReschedule(id, user.email());
     }
 }

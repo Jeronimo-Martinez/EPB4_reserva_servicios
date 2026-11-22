@@ -4,8 +4,9 @@ import { InputField, FieldError, RecaptchaCheckbox } from '@/components/ui';
 import type { RecaptchaCheckboxHandle } from '@/components/ui';
 import { useAuth } from '@/context/AuthContext';
 import { ApiError } from '@/api/client';
+import RecuperarContrasena from './RecuperarContrasena';
 
-type Screen = 'login' | 'recuperacion' | 'recuperacion-enviada';
+type Screen = 'login' | 'recuperacion';
 
 export default function InicioSesion({ onRegistro }: { onRegistro?: () => void }) {
   const { login, navigate } = useAuth();
@@ -19,7 +20,6 @@ export default function InicioSesion({ onRegistro }: { onRegistro?: () => void }
   const [loading, setLoading] = useState(false);
   const [attempts, setAttempts] = useState(0);
   const [isBlocked, setIsBlocked] = useState(false);
-  const [recoveryEmail, setRecoveryEmail] = useState('');
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [captchaError, setCaptchaError] = useState('');
   const recaptchaRef = useRef<RecaptchaCheckboxHandle>(null);
@@ -96,123 +96,16 @@ export default function InicioSesion({ onRegistro }: { onRegistro?: () => void }
     }
   };
 
-  // ─── Recuperación enviada ──────────────────────
-  if (screen === 'recuperacion-enviada') {
-    return (
-      <div className="bg-[#f2f3ee] min-h-screen flex flex-col">
-        <NavBar />
-        <main className="flex-1 flex items-center justify-center py-12 px-4">
-          <div className="bg-[#fcfcf8] rounded-[16px] border border-[#d4d9d3] shadow-sm w-full max-w-[460px] p-8 md:p-10 flex flex-col items-center text-center">
-            <div className="w-16 h-16 rounded-full bg-[#e6f0ef] flex items-center justify-center mb-6">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-                <rect x="2" y="4" width="20" height="16" rx="2" stroke="#005146" strokeWidth="1.8" />
-                <path d="M2 8l10 7 10-7" stroke="#005146" strokeWidth="1.8" strokeLinecap="round" />
-              </svg>
-            </div>
-            <p className="text-[#005146] text-[12px] font-semibold tracking-[0.96px] uppercase mb-2">
-              PROMARKET — RECUPERAR CONTRASEÑA
-            </p>
-            <h1 className="text-[#18211e] text-[26px] font-bold leading-[34px] tracking-[-0.52px] mb-3">
-              Revisa tu correo
-            </h1>
-            <p className="text-[#66716c] text-[14px] mb-1">Enviamos instrucciones a:</p>
-            <p className="text-[#18211e] text-[14px] font-semibold mb-6">{recoveryEmail}</p>
-            <div className="w-full flex gap-3 bg-[#e6f0ef] border border-[#b8d4d1] rounded-[8px] px-4 py-3 mb-7 text-left">
-              <svg className="shrink-0 mt-0.5" width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="10" stroke="#005146" strokeWidth="1.8" />
-                <path d="M12 8v4M12 16h.01" stroke="#005146" strokeWidth="1.8" strokeLinecap="round" />
-              </svg>
-              <p className="text-[#18211e] text-[13px] leading-[20px]">
-                El enlace es válido por <strong>30 minutos</strong>. Revisa también tu carpeta de spam.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setScreen('login')}
-              className="w-full bg-[#005146] hover:bg-[#00403b] text-white font-semibold text-[14px] py-[12px] rounded-[8px] transition-colors cursor-pointer"
-            >
-              Volver al inicio de sesión
-            </button>
-          </div>
-        </main>
-      </div>
-    );
-  }
-
-  // ─── Recuperación ─────────────────────────────
+  // ─── HU-04 Recuperación de contraseña ─────────
   if (screen === 'recuperacion') {
     return (
-      <div className="bg-[#f2f3ee] min-h-screen flex flex-col">
-        <NavBar />
-        <main className="flex-1 flex items-center justify-center py-12 px-4">
-          <div className="bg-[#fcfcf8] rounded-[16px] border border-[#d4d9d3] shadow-sm w-full max-w-[460px] p-8 md:p-10">
-            <button
-              type="button"
-              onClick={() => setScreen('login')}
-              className="flex items-center gap-1.5 text-[#66716c] text-[13px] font-medium hover:text-[#18211e] transition-colors mb-6 bg-transparent border-none cursor-pointer"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              Volver al inicio de sesión
-            </button>
-            <div className="w-14 h-14 rounded-full bg-[#e6f0ef] flex items-center justify-center mb-6">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <rect x="3" y="11" width="18" height="11" rx="2" stroke="#005146" strokeWidth="1.8" />
-                <path d="M7 11V7a5 5 0 0110 0v4" stroke="#005146" strokeWidth="1.8" strokeLinecap="round" />
-                <circle cx="12" cy="16" r="1.5" fill="#005146" />
-              </svg>
-            </div>
-            <p className="text-[#005146] text-[12px] font-semibold tracking-[0.96px] uppercase mb-2">
-              PROMARKET — RECUPERAR CONTRASEÑA
-            </p>
-            <h1 className="text-[#18211e] text-[28px] font-bold leading-[36px] tracking-[-0.56px] mb-2">
-              ¿Olvidaste tu contraseña?
-            </h1>
-            <p className="text-[#66716c] text-[14px] leading-[20px] mb-7">
-              Ingresa tu correo y te enviaremos las instrucciones para restablecerla.
-            </p>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-                  setEmailError('Ingresa un correo electrónico válido.');
-                  return;
-                }
-                setRecoveryEmail(email);
-                setScreen('recuperacion-enviada');
-              }}
-              noValidate
-              className="flex flex-col gap-4"
-            >
-              <InputField
-                label="Correo electrónico"
-                type="email"
-                placeholder="tu@correo.com"
-                value={email}
-                onChange={(v) => {
-                  setEmail(v);
-                  setEmailError('');
-                }}
-                error={emailError}
-              />
-              <button
-                type="submit"
-                className="w-full bg-[#005146] hover:bg-[#00403b] text-white font-semibold text-[14px] py-[12px] rounded-[8px] transition-colors cursor-pointer"
-              >
-                Enviar instrucciones
-              </button>
-              <button
-                type="button"
-                onClick={() => setScreen('login')}
-                className="w-full border border-[#d4d9d3] hover:border-[#005146] text-[#18211e] font-medium text-[14px] py-[12px] rounded-[8px] transition-colors bg-white cursor-pointer"
-              >
-                Cancelar
-              </button>
-            </form>
-          </div>
-        </main>
-      </div>
+      <RecuperarContrasena
+        initialEmail={email}
+        onBack={(recoveredEmail) => {
+          if (recoveredEmail) setEmail(recoveredEmail);
+          setScreen('login');
+        }}
+      />
     );
   }
 

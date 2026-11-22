@@ -10,6 +10,8 @@ import {
   ResendCodeDTO,
   ResendCodeResponse,
   UserRole,
+  PasswordRecoveryResponse,
+  PasswordResetDTO,
 } from '@/types/auth';
 
 export async function loginApi(credentials: LoginCredentials): Promise<LoginResponse> {
@@ -101,6 +103,37 @@ export async function fetchProfile(): Promise<ProfileData> {
 
 export async function updateProfile(data: { firstName: string; lastName: string; phone: string }): Promise<ProfileData> {
   return request<ProfileData>('/api/v1/profile', { method: 'PUT', body: JSON.stringify(data) });
+}
+
+// ─── HU-04 Recuperación de contraseña (públicos, sin token) ───
+
+/** Siempre responde lo mismo, exista o no la cuenta (el backend no revela correos registrados). */
+export async function requestPasswordRecoveryApi(email: string): Promise<PasswordRecoveryResponse> {
+  return request<PasswordRecoveryResponse>('/api/v1/auth/password-recovery', {
+    method: 'POST',
+    body: JSON.stringify({ email: email.trim().toLowerCase() }),
+  });
+}
+
+/** Comprueba el código sin consumirlo. 400 incorrecto, 410 expirado, 429 recuperación bloqueada. */
+export async function verifyRecoveryCodeApi(email: string, code: string): Promise<PasswordRecoveryResponse> {
+  return request<PasswordRecoveryResponse>('/api/v1/auth/password-recovery/verify-code', {
+    method: 'POST',
+    body: JSON.stringify({ email: email.trim().toLowerCase(), code: code.trim() }),
+  });
+}
+
+/** Cambia la contraseña y consume el código; el backend cierra todas las sesiones abiertas. */
+export async function resetPasswordApi(data: PasswordResetDTO): Promise<PasswordRecoveryResponse> {
+  return request<PasswordRecoveryResponse>('/api/v1/auth/password-recovery/reset', {
+    method: 'POST',
+    body: JSON.stringify({
+      email: data.email.trim().toLowerCase(),
+      code: data.code.trim(),
+      newPassword: data.newPassword,
+      confirmPassword: data.confirmPassword,
+    }),
+  });
 }
 
 /** Closes the session on the backend so the token stops working right away. */

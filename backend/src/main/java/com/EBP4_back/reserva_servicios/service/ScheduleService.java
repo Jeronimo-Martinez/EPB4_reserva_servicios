@@ -4,6 +4,7 @@ import com.EBP4_back.reserva_servicios.dto.AgendaResponse;
 import com.EBP4_back.reserva_servicios.dto.BusinessHoursRequest;
 import com.EBP4_back.reserva_servicios.dto.BusinessHoursResponse;
 import com.EBP4_back.reserva_servicios.dto.DayHours;
+import com.EBP4_back.reserva_servicios.dto.ReservationHistoryResponse;
 import com.EBP4_back.reserva_servicios.dto.ScheduleBlockRequest;
 import com.EBP4_back.reserva_servicios.entity.Business;
 import com.EBP4_back.reserva_servicios.entity.BusinessHours;
@@ -176,6 +177,52 @@ public class ScheduleService {
         reservation.cancel(UserRole.PROVEEDOR, reason == null || reason.isBlank() ? null : reason.trim());
         notifier.notifyCancelledByProvider(reservation);
         return toEntry(reservation);
+    }
+
+    // ---------- HU-22 Historial de reservas ----------
+
+    /** Estados que forman el historial: las reservas realmente hechas (los bloqueos temporales no cuentan). */
+    private static final List<ReservationStatus> HISTORY_STATUSES = List.of(ReservationStatus.CONFIRMADA,
+            ReservationStatus.ATENDIDA, ReservationStatus.NO_ASISTIO, ReservationStatus.CANCELADA);
+
+    /**
+     * Todas las reservas de los clientes del negocio del proveedor (o solo las de {@code status}), de la mas reciente a
+     * la mas antigua. El negocio sale del token, asi que un proveedor nunca ve reservas de otro.
+     */
+    @Transactional(readOnly = true)
+    public ReservationHistoryResponse history(String providerEmail, String status) {
+        Business business = requireBusiness(providerEmail);
+        ReservationStatus filter = parseHistoryStatus(status);
+        List<ReservationHistoryResponse.Item> items = reservationRepository
+                .findAllByServiceBusinessIdAndStatusInOrderByStartAtDesc(business.getId(),
+                        filter == null ? HISTORY_STATUSES : List.of(filter))
+                .stream()
+                .filter(reservation -> !reservation.isRescheduleHold())
+                .map(reservation -> new ReservationHistoryResponse.Item(reservation.getId(),
+                        "R-" + reservation.getId().toString().substring(0, 4).toUpperCase(Locale.ROOT),
+                        reservation.getStartAt(), reservation.getEndAt(), clientName(reservation.getClient()),
+                        reservation.getService().getName(), reservation.getService().getDurationMinutes(),
+                        reservation.getStatus().name()))
+                .toList();
+        String message = !items.isEmpty() ? null
+                : filter == null ? "Aun no hay reservas en el historial"
+                : "No hay reservas con ese estado";
+        return new ReservationHistoryResponse(filter == null ? null : filter.name(), message, items.size(), items);
+    }
+
+    private static ReservationStatus parseHistoryStatus(String status) {
+        if (status == null || status.isBlank()) {
+            return null;
+        }
+        try {
+            ReservationStatus parsed = ReservationStatus.valueOf(status.trim().toUpperCase(Locale.ROOT));
+            if (HISTORY_STATUSES.contains(parsed)) {
+                return parsed;
+            }
+        } catch (IllegalArgumentException exception) {
+            // falls through to the same 400 as an unsupported status
+        }
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Estado de reserva no valido");
     }
 
     private static String conflictWarning(List<Reservation> affected) {

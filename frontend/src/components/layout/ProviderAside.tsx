@@ -40,8 +40,24 @@ const ITEMS: { label: string; view?: AppView; icon: React.ReactNode }[] = [
     ),
   },
   {
+    label: 'Reservas Recibidas',
+    view: 'historial-proveedor',
+    icon: icon(
+      <>
+        <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      </>
+    ),
+  },
+  {
+    label: 'Reportes',
+    view: 'reporte-servicios',
+    icon: icon(
+      <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    ),
+  },
+  {
     label: 'Perfil de Negocio',
-    view: 'perfil',
+    view: 'perfil-negocio',
     icon: icon(
       <path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2zM16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2" stroke="currentColor" strokeWidth="1.8" />
     ),

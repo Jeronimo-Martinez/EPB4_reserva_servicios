@@ -1,0 +1,8 @@
+$kind: http-request
+name: Historial de Reservas
+order: 9000
+method: GET
+url: '{{baseUrl}}/api/v1/schedule/history?status=CANCELADA'
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
