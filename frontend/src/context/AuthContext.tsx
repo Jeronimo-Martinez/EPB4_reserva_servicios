@@ -85,7 +85,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Least privilege in the UI too (the backend enforces the same rule): each role only opens its own screens.
-const PROVIDER_VIEWS: AppView[] = ['servicios', 'horarios', 'agenda'];
+const PROVIDER_VIEWS: AppView[] = ['servicios', 'horarios', 'agenda', 'perfil-negocio', 'historial-proveedor'];
 const CLIENT_VIEWS: AppView[] = ['reservas', 'reservar', 'reprogramar'];
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {

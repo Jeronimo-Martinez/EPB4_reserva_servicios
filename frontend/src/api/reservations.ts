@@ -1,7 +1,8 @@
 import { request } from '@/api/client';
 import type { AvailabilityResponse } from '@/api/services';
 
-export type ReservationStatus = 'PENDIENTE' | 'CONFIRMADA' | 'CANCELADA';
+// ATENDIDA y NO_ASISTIO (HU-22) los asigna la HU de registro de asistencia.
+export type ReservationStatus = 'PENDIENTE' | 'CONFIRMADA' | 'CANCELADA' | 'ATENDIDA' | 'NO_ASISTIO';
 
 export interface ReservationResponse {
   message: string | null;

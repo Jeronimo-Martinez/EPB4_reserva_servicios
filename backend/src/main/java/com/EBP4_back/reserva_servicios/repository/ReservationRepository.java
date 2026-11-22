@@ -30,6 +30,11 @@ public interface ReservationRepository extends JpaRepository<Reservation, UUID> 
     @EntityGraph(attributePaths = {"service", "service.business"})
     List<Reservation> findAllByClientIdOrderByStartAtAsc(UUID clientId);
 
+    // HU-22: historial del proveedor, de la cita mas reciente a la mas antigua.
+    @EntityGraph(attributePaths = {"client", "service"})
+    List<Reservation> findAllByServiceBusinessIdAndStatusInOrderByStartAtDesc(UUID businessId,
+            Collection<ReservationStatus> statuses);
+
     // HU-19: bloqueo temporal del nuevo horario de una reprogramacion en curso.
     Optional<Reservation> findFirstByRescheduleOfIdOrderByCreatedAtDesc(UUID reservationId);
 

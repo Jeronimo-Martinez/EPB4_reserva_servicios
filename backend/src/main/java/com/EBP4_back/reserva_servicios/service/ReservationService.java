@@ -109,6 +109,8 @@ public class ReservationService {
             case CONFIRMADA -> "Reserva confirmada";
             case CANCELADA -> "Reserva cancelada";
             case PENDIENTE -> "Horario reservado temporalmente";
+            case ATENDIDA -> "Cita atendida";
+            case NO_ASISTIO -> "El cliente no asistio a la cita";
         });
     }
 
